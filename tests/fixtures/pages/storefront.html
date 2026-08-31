@@ -11,11 +11,13 @@
 <p>$49.00</p>
 <button>Add to cart</button>
 <script>
-  const s = JSON.parse(localStorage.getItem('settings') || '{}');
-  if (s.enabled && s.text) {
-    const el = document.createElement('div');
-    el.id = 'banner';
-    el.textContent = s.text;
-    document.getElementById('block').appendChild(el);
-  }
+  // the theme app extension block reads the app's saved settings
+  fetch('/api/settings').then(r => r.json()).then(s => {
+    if (s.enabled && s.text) {
+      const el = document.createElement('div');
+      el.id = 'banner';
+      el.textContent = s.text;
+      document.getElementById('block').appendChild(el);
+    }
+  });
 </script>

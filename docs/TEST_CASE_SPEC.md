@@ -77,6 +77,29 @@ expect toast "Settings saved"
 A failed assertion fails the test at that step; remaining steps are skipped and
 teardown still runs.
 
+### 2.2a Native dialogs — order matters
+
+A native `confirm`/`alert` blocks the page the moment it appears, so it must be
+answered by a handler that is already installed. The default is **accept**, so
+most flows need nothing:
+
+```
+click "Delete"          ← the confirm appears and is accepted
+expect "Deleted" to be visible
+```
+
+To **dismiss** one instead, put the step *before* the action that triggers it:
+
+```
+dismiss the dialog      ← sets the policy for the next dialog
+click "Delete"          ← the confirm appears and is dismissed
+expect "Deleted" to be hidden
+```
+
+Writing `accept the dialog` *after* the triggering step asserts that a dialog
+appeared. This ordering rule is the one place the grammar does not read purely
+top-to-bottom, and it is forced by how browsers work.
+
 ### 2.3 Explicit selectors (escape hatch)
 
 For an element that plain English cannot disambiguate, address it directly. This

@@ -38,11 +38,13 @@
   const placement = document.getElementById('placement');
   const error = document.getElementById('error');
 
-  // restore persisted settings so a reload reflects what was saved
-  const saved = JSON.parse(localStorage.getItem('settings') || '{}');
-  enable.checked = !!saved.enabled;
-  banner.value = saved.text || '';
-  if (saved.placement) placement.value = saved.placement;
+  // settings live on the server, like a real app's — so the storefront can see
+  // them from its own anonymous browser context
+  fetch('/api/settings').then(r => r.json()).then(saved => {
+    enable.checked = !!saved.enabled;
+    banner.value = saved.text || '';
+    if (saved.placement) placement.value = saved.placement;
+  });
 
   document.getElementById('save').addEventListener('click', () => {
     if (enable.checked && !banner.value.trim()) {
@@ -50,10 +52,13 @@
       return;
     }
     error.classList.remove('show');
-    localStorage.setItem('settings', JSON.stringify({
-      enabled: enable.checked, text: banner.value, placement: placement.value,
-    }));
-    // the admin host renders the toast, not us — same as App Bridge
-    parent.postMessage({ type: 'toast', text: 'Settings saved' }, '*');
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: enable.checked, text: banner.value, placement: placement.value }),
+    }).then(() => {
+      // the admin host renders the toast, not us — same as App Bridge
+      parent.postMessage({ type: 'toast', text: 'Settings saved' }, '*');
+    });
   });
 </script>

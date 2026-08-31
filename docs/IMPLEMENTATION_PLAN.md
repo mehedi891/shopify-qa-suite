@@ -93,11 +93,14 @@ proves impossible on your store setup, we learn it on day one, not day five.
 
 ## Milestone checklist
 
-- [ ] M1 — Embedded app and storefront both reachable from a script (Phase 1)
-- [ ] M2 — Real sheet parses clean (Phase 2)
-- [ ] M3 — One cross-surface case passes, cached (Phase 3)
-- [ ] M4 — Full suite runs, results in the sheet (Phase 4)
-- [ ] M5 — Green in CI three nights running (Phase 5)
+- [x] M2 — Sheet parses clean, with per-row/per-line errors (Phase 2)
+- [x] M3 — Cross-surface case passes against fixture pages, cached, zero planner
+      calls on a warm run (Phase 3)
+- [x] M4 — Runner executes suites with retries, teardown, isolation, artifacts
+      and an HTML report (Phase 4)
+- [ ] M1 — Embedded app and storefront reachable on the real store (Phase 1) —
+      **blocked on dev-store access**
+- [ ] M5 — Full suite green in CI three nights running (Phase 5)
 
 ## Deliberately deferred
 

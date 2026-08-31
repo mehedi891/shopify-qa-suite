@@ -6,6 +6,7 @@ import { CsvSource } from '../source/CsvSource.js';
 import { SheetsSource } from '../source/SheetsSource.js';
 import type { TestCaseSource } from '../source/TestCaseSource.js';
 import { reportValidation } from './validate.js';
+import { runCommand } from './run.js';
 
 const program = new Command();
 
@@ -51,10 +52,10 @@ program
   .option('--only-failed', 'rerun the cases that failed last time')
   .option('--headed', 'show the browser')
   .option('--no-write', 'do not write results back to the sheet')
-  .action(async () => {
-    console.log(pc.yellow('`qa run` arrives in Phase 3/4 (see docs/IMPLEMENTATION_PLAN.md).'));
-    console.log(pc.dim('Phase 1 (Shopify session + iframe) is blocked on dev-store credentials.'));
-    process.exit(2);
+  .option('-v, --verbose', 'print every step as it runs')
+  .action(async (opts) => {
+    const code = await runCommand(resolveSource(opts.csv), opts);
+    process.exit(code);
   });
 
 program
@@ -70,8 +71,8 @@ program
   .command('report')
   .description('Open the most recent HTML report')
   .action(async () => {
-    console.log(pc.yellow('`qa report` arrives in Phase 4.'));
-    process.exit(2);
+    const { openLastReport } = await import('./report.js');
+    process.exit(await openLastReport());
   });
 
 async function main() {

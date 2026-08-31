@@ -12,9 +12,40 @@ const TYPES: Record<string, string> = {
 };
 
 /** Tiny static server so fixture pages share one origin, like a real store. */
-export async function startFixtureServer(): Promise<{ url: string; close: () => Promise<void> }> {
+export interface FixtureServer {
+  url: string;
+  /** Settings as the "backend" holds them, for assertions and reset. */
+  settings: () => Record<string, unknown>;
+  reset: () => void;
+  close: () => Promise<void>;
+}
+
+export async function startFixtureServer(): Promise<FixtureServer> {
+  // Settings live server-side, exactly as a real app's do. This matters: the
+  // storefront runs in its own anonymous browser context, so anything kept in
+  // localStorage would be invisible to it — and the cross-surface flow is the
+  // whole point of the suite.
+  let settings: Record<string, unknown> = {};
+
   const server: Server = createServer(async (req, res) => {
     const raw = (req.url ?? '/').split('?')[0]!;
+
+    if (raw === '/api/settings') {
+      if (req.method === 'POST') {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(chunk as Buffer);
+        try {
+          settings = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        } catch {
+          settings = {};
+        }
+        res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(settings));
+      return;
+    }
+
     const path = normalize(decodeURIComponent(raw)).replace(/^(\.\.[/\\])+/, '');
     const file = join(PAGES, path === '/' ? 'admin.html' : path);
     try {
@@ -32,6 +63,8 @@ export async function startFixtureServer(): Promise<{ url: string; close: () => 
 
   return {
     url: `http://127.0.0.1:${addr.port}`,
+    settings: () => settings,
+    reset: () => { settings = {}; },
     close: () => new Promise<void>((resolve) => { server.close(() => resolve()); }),
   };
 }

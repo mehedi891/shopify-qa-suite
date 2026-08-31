@@ -33,11 +33,15 @@ Early. Built in phases — see [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION
 | 0 | Scaffolding, CLI, config | ✅ done |
 | 2 | Sheet ingestion, step grammar, `qa validate` | ✅ done |
 | 3 | Step engine, locator cache, planner | ✅ done |
-| 1 | Shopify session reuse, App Bridge iframe, storefront | ⏸ blocked on dev-store access |
-| 4 | Runner, reporting, sheet write-back | ⏳ next |
-| 5 | Fixtures, Slack, CI | ⏳ |
+| 4 | Runner, reporting, sheet write-back | ✅ done |
+| 1 | Shopify session reuse, App Bridge iframe, storefront | ⏸ **blocked on dev-store access** |
+| 5 | Fixture reset, CI workflow | ⏳ |
 
-Phase 1 needs credentials — see the access checklist in [docs/SETUP.md](docs/SETUP.md#0-what-i-need-from-you-to-start-access-checklist).
+Everything except the Shopify-specific surfaces is built and tested. Phase 1 is
+the only remaining blocker and needs credentials — see the access checklist in
+[docs/SETUP.md](docs/SETUP.md#0-what-i-need-from-you-to-start-access-checklist).
+It slots into one interface (`SurfaceSet` in [src/surfaces/index.ts](src/surfaces/index.ts));
+nothing above it changes.
 
 ## Try it now (no credentials needed)
 
