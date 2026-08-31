@@ -14,6 +14,8 @@ export interface SessionInfo {
   appHost?: string;
   surface: 'admin' | 'storefront';
   url?: string;
+  /** Which browser is driving, e.g. "Google Chrome · profile .qa-profile". */
+  browser?: string;
 }
 
 export type Command =

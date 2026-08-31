@@ -118,12 +118,23 @@ program
 program
   .command('start')
   .description('Open a browser session for you to log into')
-  .action(async () => process.exit(await session.startSession()));
+  .option('--chromium', "use Playwright's bundled Chromium instead of your Chrome")
+  .option('--attach [endpoint]', 'attach to a Chrome you started yourself (default http://127.0.0.1:9222)')
+  .action(async (opts: { chromium?: boolean; attach?: boolean | string }) =>
+    process.exit(await session.startSession(opts)));
 
 program
   .command('serve', { hidden: true })
   .description('Run the session server in the foreground (used by `qa start`)')
-  .action(async () => { await session.serveSession(); });
+  .option('--mode <mode>', 'chrome | chromium | attach', 'chrome')
+  .option('--cdp <endpoint>', 'CDP endpoint for attach mode', 'http://127.0.0.1:9222')
+  .action(async (opts: { mode: string; cdp: string }) => {
+    await session.serveSession({
+      mode: opts.mode as 'chrome' | 'chromium' | 'attach',
+      profileDir: '.qa-profile',
+      cdpEndpoint: opts.cdp,
+    });
+  });
 
 program
   .command('detect')

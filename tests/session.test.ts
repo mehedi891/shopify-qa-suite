@@ -34,3 +34,23 @@ describe('chat table', () => {
     expect(toMarkdownTable(records)).toContain('Banner \\| with pipe');
   });
 });
+
+describe('launch mode selection', () => {
+  it('defaults to real Chrome, since bundled Chromium is refused by Shopify login', async () => {
+    const { sessionOptions } = await import('../src/cli/session.js');
+    expect(sessionOptions({}).mode).toBe('chrome');
+    expect(sessionOptions({ chromium: true }).mode).toBe('chromium');
+    expect(sessionOptions({ attach: true }).mode).toBe('attach');
+  });
+
+  it('uses a persistent profile so a login survives between sessions', async () => {
+    const { sessionOptions } = await import('../src/cli/session.js');
+    expect(sessionOptions({}).profileDir).toBe('.qa-profile');
+  });
+
+  it('accepts a custom CDP endpoint for attach mode', async () => {
+    const { sessionOptions } = await import('../src/cli/session.js');
+    expect(sessionOptions({ attach: 'http://127.0.0.1:9333' }).cdpEndpoint).toBe('http://127.0.0.1:9333');
+    expect(sessionOptions({ attach: true }).cdpEndpoint).toBe('http://127.0.0.1:9222');
+  });
+});

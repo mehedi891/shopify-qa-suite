@@ -13,3 +13,4 @@ qa-results-*.csv
 .cache/
 artifacts/
 test-results/
+.qa-profile/

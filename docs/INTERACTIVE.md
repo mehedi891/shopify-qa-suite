@@ -37,11 +37,65 @@ npx tsx src/cli/index.ts start      # a browser window opens
 4. **Agent** reads it, then for each case runs the steps and records a verdict.
 5. **Agent** runs `qa results` — a table in chat and a CSV on disk.
 
+## Which browser it drives
+
+`qa start` uses **your installed Google Chrome** with a persistent profile at
+`.qa-profile/`, and strips the flags that mark a browser as automated.
+
+That matters because Playwright's *bundled* Chromium gets rejected by Shopify
+login — and by Google SSO especially, which refuses it with "this browser or app
+may not be secure". Bundled Chromium sets `navigator.webdriver`, carries an
+"automation controlled" flag, and lacks real Chrome's branding and codecs.
+
+With the default mode: `navigator.webdriver` is `false`, the user agent is real
+Chrome's, and plugins are present.
+
+**You log in once, ever.** The profile directory keeps your cookies, so every
+later `qa start` is already signed in. `.qa-profile/` is gitignored — it holds a
+live session.
+
+### If login is still blocked
+
+Escalate in this order:
+
+**1. Default — your Chrome, dedicated profile** (try this first)
+
+```bash
+qa start
+```
+
+**2. Attach to a Chrome you started yourself.** Nothing about the browser is
+automated; Playwright only connects after the fact. This is the most reliable
+option, and the one to use if SSO still refuses.
+
+```bash
+# start Chrome yourself, once
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/.qa-chrome-profile"
+
+# log into Shopify in that window, then:
+qa start --attach
+```
+
+The `--user-data-dir` is required, not optional: **since Chrome 136, remote
+debugging is refused on the default profile directory.** Use a dedicated one and
+log in there once — it persists, so this is a one-time step. `qa stop` detaches
+without closing your browser.
+
+**3. Bundled Chromium** — only if you have no Chrome installed:
+
+```bash
+qa start --chromium
+```
+
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `qa start` | Opens the browser session and returns immediately |
+| `qa start` | Opens your Chrome with a persistent profile |
+| `qa start --attach` | Attaches to a Chrome you started yourself |
+| `qa start --chromium` | Bundled Chromium (last resort) |
 | `qa detect` | Reads store, app handle and iframe host from the open page |
 | `qa status` | Current store, app, surface and URL |
 | `qa snapshot [--frame app\|host]` | Accessibility tree per frame — **how the agent sees the page** |

@@ -1,7 +1,8 @@
 import { createServer } from 'node:http';
 import { writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import type { BrowserContext, Page } from 'playwright';
+import { launchBrowser, type LaunchMode, type LaunchedBrowser } from './launch.js';
 import type { SurfaceName, Step } from '../types.js';
 import type { FrameProvider, NamedRoot } from '../engine/resolve.js';
 import { ariaSnapshot } from '../engine/resolve.js';
@@ -17,8 +18,14 @@ import { slug } from '../surfaces/StorefrontSurface.js';
 const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopifycloud\.com)$/;
 
 /** A browser that outlives a single command, so one human login covers a whole run. */
+export interface SessionOptions {
+  mode: LaunchMode;
+  profileDir: string;
+  cdpEndpoint: string;
+}
+
 export class QaSession {
-  private browser!: Browser;
+  private launched!: LaunchedBrowser;
   private context!: BrowserContext;
   private adminPage!: Page;
   private storefrontPage?: Page;
@@ -29,15 +36,22 @@ export class QaSession {
   private info!: SessionInfo;
   private stepIndex = 0;
 
-  async start(port = 0): Promise<SessionInfo> {
-    this.browser = await chromium.launch({ headless: false, args: ['--start-maximized'] });
-    // one context: a person testing their own store is logged in on both
-    // the admin and the storefront, and that is what we are simulating
-    this.context = await this.browser.newContext({ viewport: null });
+  async start(opts: SessionOptions, port = 0): Promise<SessionInfo> {
+    this.launched = await launchBrowser(opts);
+    // one context: a person testing their own store is logged in on both the
+    // admin and the storefront, and that is what we are simulating
+    this.context = this.launched.context;
     this.context.setDefaultTimeout(15_000);
-    this.adminPage = await this.context.newPage();
+
+    // reuse an already-open tab when attaching, so we land in the user's session
+    const existing = this.context.pages();
+    this.adminPage = existing[0] ?? await this.context.newPage();
     this.dialogs.attach(this.adminPage);
-    await this.adminPage.goto('https://admin.shopify.com/', { waitUntil: 'domcontentloaded' }).catch(() => {});
+
+    // do not hijack a tab the user is already using
+    if (opts.mode !== 'attach' || this.adminPage.url() === 'about:blank') {
+      await this.adminPage.goto('https://admin.shopify.com/', { waitUntil: 'domcontentloaded' }).catch(() => {});
+    }
 
     const server = createServer(async (req, res) => {
       if (req.method !== 'POST') { res.writeHead(405).end(); return; }
@@ -56,14 +70,18 @@ export class QaSession {
     const addr = server.address();
     if (typeof addr === 'string' || !addr) throw new Error('session server failed to bind');
 
-    this.info = { pid: process.pid, port: addr.port, startedAt: new Date().toISOString(), surface: 'admin' };
+    this.info = {
+      pid: process.pid, port: addr.port, startedAt: new Date().toISOString(),
+      surface: 'admin', browser: this.launched.description,
+    };
     this.persist();
 
     const cleanup = () => rmSync(SESSION_FILE, { force: true });
     process.on('exit', cleanup);
     process.on('SIGINT', () => { cleanup(); process.exit(0); });
     process.on('SIGTERM', () => { cleanup(); process.exit(0); });
-    this.browser.on('disconnected', () => { cleanup(); process.exit(0); });
+    this.launched.browser?.on('disconnected', () => { cleanup(); process.exit(0); });
+    this.context.on('close', () => { cleanup(); process.exit(0); });
 
     return this.info;
   }

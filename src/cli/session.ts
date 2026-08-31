@@ -1,24 +1,37 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import pc from 'picocolors';
-import { QaSession } from '../session/server.js';
+import { QaSession, type SessionOptions } from '../session/server.js';
+import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
 import { RESULT_HEADER, toMarkdownTable, writeResultsCsv, type ResultRecord } from '../report/csv.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
 const RESULTS_PATH = '.cache/session-results.json';
 
+const PROFILE_DIR = '.qa-profile';
+const CDP_ENDPOINT = 'http://127.0.0.1:9222';
+
+export function sessionOptions(opts: { chromium?: boolean; attach?: boolean | string }): SessionOptions {
+  const mode: LaunchMode = opts.attach ? 'attach' : opts.chromium ? 'chromium' : 'chrome';
+  return {
+    mode,
+    profileDir: PROFILE_DIR,
+    cdpEndpoint: typeof opts.attach === 'string' ? opts.attach : CDP_ENDPOINT,
+  };
+}
+
 /** Run the session server in this process (the daemon entrypoint). */
-export async function serveSession(): Promise<never> {
+export async function serveSession(opts: SessionOptions): Promise<never> {
   const session = new QaSession();
-  const info = await session.start();
+  const info = await session.start(opts);
   console.log(pc.green(`browser session ready on port ${info.port} (pid ${info.pid})`));
-  console.log(pc.dim('Log into Shopify in the window that opened, then run `qa detect`.'));
+  console.log(pc.dim(`browser: ${info.browser}`));
   return new Promise<never>(() => {}); // stay alive
 }
 
 /** `qa start` — spawn the session detached so the shell returns immediately. */
-export async function startSession(): Promise<number> {
+export async function startSession(opts: { chromium?: boolean; attach?: boolean | string } = {}): Promise<number> {
   if (existsSync(SESSION_FILE)) {
     try {
       const status = await send({ type: 'status' });
@@ -31,11 +44,9 @@ export async function startSession(): Promise<number> {
     }
   }
 
-  const child = spawn(process.execPath, [...process.execArgv, entrypoint(), 'serve'], {
-    detached: true,
-    stdio: 'ignore',
-    env: process.env,
-  });
+  const mode = sessionOptions(opts);
+  const args = [...process.execArgv, entrypoint(), 'serve', '--mode', mode.mode, '--cdp', mode.cdpEndpoint];
+  const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore', env: process.env });
   child.unref();
 
   for (let i = 0; i < 60; i++) {
@@ -43,14 +54,18 @@ export async function startSession(): Promise<number> {
     if (existsSync(SESSION_FILE)) {
       const info = readSession();
       console.log(pc.green('✓ browser window open') + pc.dim(` (pid ${info.pid})`));
+      if (info.browser) console.log(pc.dim(`  ${info.browser}`));
       console.log('\nNext:');
-      console.log('  1. Log into your Shopify admin in that window');
+      console.log('  1. Log into your Shopify admin in that window (once — the profile persists)');
       console.log('  2. Open the app you want to test');
       console.log(`  3. Run ${pc.bold('qa detect')}\n`);
       return 0;
     }
   }
   console.error(pc.red('The browser session did not start in time.'));
+  if (mode.mode === 'attach') {
+    console.error(pc.dim(`Is Chrome running with --remote-debugging-port? See docs/INTERACTIVE.md.`));
+  }
   return 1;
 }
 
