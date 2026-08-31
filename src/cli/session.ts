@@ -81,6 +81,13 @@ export async function detect(): Promise<number> {
   return res.ok ? 0 : 1;
 }
 
+/** `qa doctor` — why is the app iframe not showing what I expect? */
+export async function doctor(): Promise<number> {
+  const res = await send({ type: 'doctor' });
+  console.log(res.ok ? pc.green(`✓ ${res.message}`) : pc.yellow(`⚠ ${res.message}`));
+  return res.ok ? 0 : 1;
+}
+
 export async function status(): Promise<number> {
   const res = await send({ type: 'status' });
   console.log(JSON.stringify(res.data, null, 2));

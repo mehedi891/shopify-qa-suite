@@ -142,6 +142,11 @@ program
   .action(async () => process.exit(await session.detect()));
 
 program
+  .command('doctor')
+  .description('Diagnose the app iframe: rendering, dev server down, or not installed')
+  .action(async () => process.exit(await session.doctor()));
+
+program
   .command('status')
   .description('Show the current session: store, app, surface, URL')
   .action(async () => process.exit(await session.status()));

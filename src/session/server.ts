@@ -14,6 +14,7 @@ import { DialogController } from '../runner/dialogs.js';
 import { parseStepLine } from '../source/parser.js';
 import { SESSION_FILE, type Command, type CommandResult, type PlayedStep, type SessionInfo } from './protocol.js';
 import { slug } from '../surfaces/StorefrontSurface.js';
+import { diagnoseAppFrame } from '../surfaces/diagnose.js';
 
 const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopifycloud\.com)$/;
 
@@ -141,6 +142,7 @@ export class QaSession {
     switch (cmd.type) {
       case 'status': return { ok: true, data: { ...this.info, url: this.page.url(), surface: this.current } };
       case 'detect': return this.detect();
+      case 'doctor': return this.doctor();
       case 'frames': return { ok: true, data: this.page.frames().map((f) => ({ url: f.url(), name: f.name() })) };
       case 'snapshot': return this.snapshot(cmd.frame ?? 'auto', cmd.maxChars ?? 18_000);
       case 'do': return this.doStep(cmd.step, cmd.testCaseId, cmd.index);
@@ -307,6 +309,19 @@ export class QaSession {
       ok: !failed,
       message: failed ? 'case failed' : 'all steps passed',
       data: { steps: played, url: this.page.url(), surface: this.current },
+    };
+  }
+
+  /**
+   * Explain what the app iframe is actually showing. Separates "no iframe" from
+   * "your tunnel is down", which look the same but need different fixes.
+   */
+  private async doctor(): Promise<CommandResult> {
+    const d = await diagnoseAppFrame(this.adminPage, this.info.appHost);
+    return {
+      ok: d.kind === 'ok',
+      message: d.message + (d.frameUrl ? `\n  frame: ${d.frameUrl}` : ''),
+      data: d,
     };
   }
 

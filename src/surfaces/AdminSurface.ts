@@ -3,6 +3,7 @@ import type { FrameProvider, NamedRoot } from '../engine/resolve.js';
 import type { ActiveSurface } from '../runner/Surface.js';
 import type { AppProfile } from '../config/apps.js';
 import { adminUrl } from '../config/apps.js';
+import { diagnoseAppFrame } from './diagnose.js';
 
 /**
  * The Shopify admin, with our app in its App Bridge iframe.
@@ -58,12 +59,12 @@ export class AdminSurface implements ActiveSurface {
     try {
       await frame.locator('body').waitFor({ state: 'attached', timeout: this.timeoutMs });
     } catch {
-      const frames = this.page.frames().map((f) => f.url()).filter((u) => u && u !== 'about:blank');
+      // "no iframe" and "dev server down" look identical unless you look
+      const diagnosis = await diagnoseAppFrame(this.page, this.profile.appHost);
       throw new Error(
-        `The embedded app iframe never appeared.\n` +
-        `  Looked for: iframe[src*="${this.profile.appHost}"]\n` +
-        `  Frames present: ${frames.length ? frames.join(', ') : '(none)'}\n` +
-        `  Check SHOPIFY_APP_HOST matches the app's real URL, and that the app is installed on ${this.profile.store}.`,
+        `${diagnosis.message}\n` +
+        `  Looked for: iframe[src*="${this.profile.appHost}"]` +
+        (diagnosis.frameUrl ? `\n  Frame URL: ${diagnosis.frameUrl}` : ''),
       );
     }
   }

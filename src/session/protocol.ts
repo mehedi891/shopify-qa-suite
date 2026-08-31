@@ -21,6 +21,7 @@ export interface SessionInfo {
 export type Command =
   | { type: 'status' }
   | { type: 'detect' }
+  | { type: 'doctor' }
   | { type: 'snapshot'; frame?: 'app' | 'host' | 'page' | 'auto'; maxChars?: number }
   | { type: 'frames' }
   | { type: 'do'; step: string; testCaseId?: string; index?: number }

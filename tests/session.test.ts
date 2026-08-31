@@ -54,3 +54,24 @@ describe('launch mode selection', () => {
     expect(sessionOptions({ attach: true }).cdpEndpoint).toBe('http://127.0.0.1:9222');
   });
 });
+
+describe('app iframe diagnosis', () => {
+  it('redacts the credentials Shopify puts in embedded-app URLs', async () => {
+    const { redactUrl } = await import('../src/surfaces/diagnose.js');
+    const url = 'https://app.ngrok-free.app/app?embedded=1&hmac=abc123&host=YWRtaW4&' +
+      'id_token=eyJhbGciOiJIUzI1NiJ9.payload.sig&session=deadbeef&shop=s.myshopify.com';
+    const out = redactUrl(url);
+    // live credentials must never reach a terminal, log or CI transcript
+    expect(out).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    expect(out).not.toContain('deadbeef');
+    expect(out).not.toContain('abc123');
+    // but the useful parts survive, or the diagnosis is worthless
+    expect(out).toContain('app.ngrok-free.app/app');
+    expect(out).toContain('shop=s.myshopify.com');
+  });
+
+  it('leaves a plain URL alone', async () => {
+    const { redactUrl } = await import('../src/surfaces/diagnose.js');
+    expect(redactUrl('https://example.com/app')).toBe('https://example.com/app');
+  });
+});
