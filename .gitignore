@@ -1,0 +1,12 @@
+node_modules/
+dist/
+
+# live credentials — never commit
+.env
+.auth/
+*.service-account.json
+
+# run state
+.cache/
+artifacts/
+test-results/

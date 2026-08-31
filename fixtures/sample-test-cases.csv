@@ -1,0 +1,32 @@
+ID,Title,Suite,Tags,Surface,Precondition,Steps,Expected Result,Teardown,Enabled,Status,Last Run,Duration,Failure Reason,Artifacts
+TC-001,App loads in the Shopify admin,onboarding,"smoke, p0",admin,,"open the app
+wait for ""Dashboard""","expect ""Dashboard"" to be visible",,TRUE,,,,,
+TC-002,Settings page saves a banner text,settings,"smoke, p0",admin,,"open the app
+click ""Settings""
+fill ""Banner text"" with ""Summer sale {random}""
+click ""Save""","expect toast ""Settings saved""",,TRUE,,,,,
+TC-021,Banner text set in admin appears on the storefront product page,widget,"smoke, cross-surface, p0",admin,,"open the app
+click ""Settings""
+turn on ""Enable discount banner""
+fill ""Banner text"" with ""Free shipping over $50 {random}""
+click ""Save""
+expect toast ""Settings saved""
+save the value of ""Banner text"" as bannerText
+switch to storefront
+go to the product page for ""Test Product""","expect ""{bannerText}"" to be visible","switch to admin
+turn off ""Enable discount banner""
+click ""Save""",TRUE,,,,,
+TC-022,Disabling the widget removes it from the storefront,widget,"cross-surface, p1",admin,,"open the app
+click ""Settings""
+turn off ""Enable discount banner""
+click ""Save""
+switch to storefront
+go to the product page for ""Test Product""
+reload the page","expect ""Free shipping"" to be hidden",,TRUE,,,,,
+TC-030,Settings validation rejects an empty banner text,settings,p2,admin,,"open the app
+click ""Settings""
+turn on ""Enable discount banner""
+fill ""Banner text"" with """"
+click ""Save""","expect ""Banner text is required"" to be visible","switch to admin
+turn off ""Enable discount banner""
+click ""Save""",TRUE,,,,,

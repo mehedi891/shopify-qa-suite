@@ -1,0 +1,8 @@
+ID,Title,Suite,Tags,Surface,Precondition,Steps,Expected Result,Teardown,Enabled
+TC-001,Duplicate id case,settings,,admin,,"click ""Save""","expect ""x"" to be visible",,TRUE
+TC-001,Another with the same id,settings,,admin,,"click ""Save""","expect ""x"" to be visible",,TRUE
+,Missing id,settings,,admin,,"click ""Save""","expect ""x"" to be visible",,TRUE
+TC-002,Bad surface,settings,,sidebar,,"click ""Save""","expect ""x"" to be visible",,TRUE
+TC-003,Unparseable step,settings,,admin,,"frobnicate the widget","expect ""x"" to be visible",,TRUE
+TC-004,Undefined variable,settings,,admin,,"fill ""Name"" with ""{nope}""","expect ""x"" to be visible",,TRUE
+TC-005,No steps at all,settings,,admin,,,"expect ""x"" to be visible",,TRUE
