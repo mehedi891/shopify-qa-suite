@@ -1,0 +1,19 @@
+{
+  "default": "discount-banner",
+  "apps": {
+    "discount-banner": {
+      "store": "my-dev-store.myshopify.com",
+      "appHandle": "discount-banner",
+      "appHost": "discount-banner.example.com",
+      "sheetId": "1AbC_replace_with_your_sheet_id",
+      "sheetTab": "Test Cases"
+    },
+    "second-app": {
+      "store": "my-dev-store.myshopify.com",
+      "appHandle": "second-app",
+      "appHost": "second-app.example.com",
+      "sheetId": "1XyZ_another_sheet_id",
+      "sheetTab": "Test Cases"
+    }
+  }
+}

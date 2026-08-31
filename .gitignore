@@ -4,6 +4,7 @@ dist/
 # live credentials — never commit
 .env
 .auth/
+qa.apps.json
 *.service-account.json
 
 # run state

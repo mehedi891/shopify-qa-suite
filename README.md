@@ -34,14 +34,16 @@ Early. Built in phases — see [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION
 | 2 | Sheet ingestion, step grammar, `qa validate` | ✅ done |
 | 3 | Step engine, locator cache, planner | ✅ done |
 | 4 | Runner, reporting, sheet write-back | ✅ done |
-| 1 | Shopify session reuse, App Bridge iframe, storefront | ⏸ **blocked on dev-store access** |
+| 1 | Shopify session reuse, App Bridge iframe, storefront | ✅ built — **unverified against a real store** |
 | 5 | Fixture reset, CI workflow | ⏳ |
 
-Everything except the Shopify-specific surfaces is built and tested. Phase 1 is
-the only remaining blocker and needs credentials — see the access checklist in
-[docs/SETUP.md](docs/SETUP.md#0-what-i-need-from-you-to-start-access-checklist).
-It slots into one interface (`SurfaceSet` in [src/surfaces/index.ts](src/surfaces/index.ts));
-nothing above it changes.
+All of it is built. Phase 1 is written against Shopify's documented structure but
+has **never run against a real store** — the iframe `src` pattern and which
+components land in which frame need confirming on your dev store. See the access
+checklist in [docs/SETUP.md](docs/SETUP.md#0-what-i-need-from-you-to-start-access-checklist).
+
+Testing several apps? A Shopify session is per *store*, not per app — see
+[SETUP.md §0b](docs/SETUP.md).
 
 ## Try it now (no credentials needed)
 
@@ -71,6 +73,7 @@ line number — without opening a browser:
 
 | Command | Purpose |
 |---|---|
+| `qa apps` | List app profiles and session status. |
 | `qa validate` | Parse-check the sheet. Instant, no browser. |
 | `qa run` | Run every enabled case. |
 | `qa run --tag smoke` | Run one tag. |

@@ -38,6 +38,50 @@ local CSV), and the step-grammar unit tests.
 
 ---
 
+## 0b. Testing several apps
+
+A Shopify admin **session is per store, not per app**. Two apps on the same dev
+store share one `qa auth` login.
+
+For one app, `.env` is enough. For several, create `qa.apps.json` (copy
+`qa.apps.example.json`):
+
+```json
+{
+  "default": "discount-banner",
+  "apps": {
+    "discount-banner": {
+      "store": "my-dev-store.myshopify.com",
+      "appHandle": "discount-banner",
+      "appHost": "discount-banner.example.com",
+      "sheetId": "1AbC…",
+      "sheetTab": "Test Cases"
+    },
+    "second-app": { "store": "my-dev-store.myshopify.com", "appHandle": "second-app",
+                    "appHost": "second-app.example.com", "sheetId": "1XyZ…" }
+  }
+}
+```
+
+Then select one per command:
+
+```bash
+qa apps                       # list profiles and session status
+qa auth --app second-app      # log in for that profile's store
+qa run  --app second-app --tag smoke
+qa validate --app second-app
+```
+
+Each app may point at its own Google Sheet. `qa.apps.json` is gitignored — it
+names your real stores.
+
+**`appHost` is the important field.** It is the host of the app iframe's `src`,
+and it is how the tool finds your embedded app inside the admin. To read it off
+a real store: open the app in the admin, right-click inside it → Inspect, and
+look at the enclosing `<iframe src="…">`.
+
+---
+
 ## 1. Prerequisites
 
 - Node.js 24+

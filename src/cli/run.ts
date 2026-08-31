@@ -1,6 +1,7 @@
 import pc from 'picocolors';
 import config from '../../qa.config.js';
 import { env } from '../config/env.js';
+import { adminUrl, resolveProfile, storefrontUrl } from '../config/apps.js';
 import { LocatorCache } from '../engine/LocatorCache.js';
 import { createPlanner } from '../engine/Planner.js';
 import { ConsoleReporter } from '../report/ConsoleReporter.js';
@@ -15,6 +16,7 @@ import { createSurfaces } from '../surfaces/index.js';
 import { reportValidation } from './validate.js';
 
 export interface RunOptions {
+  app?: string;
   id?: string[];
   tag?: string[];
   suite?: string;
@@ -26,6 +28,7 @@ export interface RunOptions {
 
 /** Returns the process exit code. */
 export async function runCommand(source: TestCaseSource, opts: RunOptions): Promise<number> {
+  const profile = resolveProfile(opts.app);
   const parsed = await source.load();
 
   // refuse to start on a sheet that does not parse — two seconds beats
@@ -57,15 +60,13 @@ export async function runCommand(source: TestCaseSource, opts: RunOptions): Prom
     new ConsoleReporter(opts.verbose),
     new HtmlReporter(artifacts),
     new SheetReporter(isWritable(source) ? source : undefined, artifacts, opts.write !== false),
-    new SlackReporter(env.SLACK_WEBHOOK_URL, config.store.domain),
+    new SlackReporter(env.SLACK_WEBHOOK_URL, `${profile.name} · ${profile.store}`),
   ];
 
+  console.log(pc.dim(`app: ${profile.name} · store: ${profile.store}`));
+
   const surfaces = await createSurfaces({
-    storeDomain: config.store.domain,
-    appHandle: config.store.appHandle,
-    appHost: config.store.appHost,
-    storefrontPassword: env.SHOPIFY_STOREFRONT_PASSWORD,
-    authStatePath: '.auth/admin.json',
+    profile,
     headless: !opts.headed && config.run.headless,
     timeoutMs: config.run.timeoutMs,
   });
@@ -82,9 +83,9 @@ export async function runCommand(source: TestCaseSource, opts: RunOptions): Prom
         screenshots: config.artifacts.screenshots,
         trace: config.artifacts.trace === 'on-failure' ? 'on-failure' : 'off',
         builtins: {
-          store: config.store.domain,
-          adminUrl: `https://admin.shopify.com/store/${storeHandle(config.store.domain)}`,
-          storefrontUrl: `https://${config.store.domain}`,
+          store: profile.store,
+          adminUrl: adminUrl(profile.store),
+          storefrontUrl: storefrontUrl(profile.store),
           runId: artifacts.runId,
         },
       },
@@ -98,5 +99,3 @@ export async function runCommand(source: TestCaseSource, opts: RunOptions): Prom
     await surfaces.close();
   }
 }
-
-const storeHandle = (domain: string) => domain.replace(/\.myshopify\.com$/, '');
