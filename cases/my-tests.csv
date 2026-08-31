@@ -1,0 +1,3 @@
+ID,Title,Suite,Tags,Surface,Precondition,Steps,Expected Result,Teardown,Enabled
+TC-001,App opens in the admin,basic,smoke,admin,,"open the app","expect ""Dashboard"" to be visible",,TRUE
+TC-002,Product page loads,basic,smoke,storefront,,"go to the product page for ""Test Product""","expect ""Add to cart"" to be visible",,TRUE

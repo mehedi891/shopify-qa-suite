@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Short way to run the tool: ./qa start, ./qa detect, ./qa suite --csv ...
+set -e
+cd "$(dirname "$0")"
+exec npx tsx src/cli/index.ts "$@"
