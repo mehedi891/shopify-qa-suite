@@ -185,6 +185,30 @@ export async function goSurface(surface: 'admin' | 'storefront', target?: string
   return res.ok ? 0 : 1;
 }
 
+const VIEWPORTS: Record<string, [number, number]> = {
+  mobile: [390, 844],      // iPhone 14
+  'mobile-small': [360, 640],
+  tablet: [820, 1180],     // iPad Air
+  desktop: [1440, 900],
+  wide: [1920, 1080],
+};
+
+/** `qa viewport mobile` — design breaks are almost always narrow-viewport bugs. */
+export async function viewport(preset: string): Promise<number> {
+  const named = VIEWPORTS[preset.toLowerCase()];
+  const custom = /^(\d+)x(\d+)$/i.exec(preset);
+  if (!named && !custom) {
+    console.error(pc.red(
+      `Unknown viewport "${preset}". Use ${Object.keys(VIEWPORTS).join(', ')}, or WxH like 412x915.`,
+    ));
+    return 1;
+  }
+  const [width, height] = named ?? [Number(custom![1]), Number(custom![2])];
+  const res = await send({ type: 'viewport', width, height });
+  console.log(res.ok ? pc.green(`✓ ${res.message}`) : pc.red(`✗ ${res.message}`));
+  return res.ok ? 0 : 1;
+}
+
 export async function shot(path: string): Promise<number> {
   const res = await send({ type: 'screenshot', path });
   console.log(res.ok ? pc.green(`✓ ${res.message}`) : pc.red(`✗ ${res.message}`));

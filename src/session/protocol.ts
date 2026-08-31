@@ -28,6 +28,7 @@ export type Command =
   | { type: 'play'; steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean }
   | { type: 'goto'; surface: 'admin' | 'storefront'; target?: string }
   | { type: 'switch'; surface: 'admin' | 'storefront' }
+  | { type: 'viewport'; width: number; height: number }
   | { type: 'screenshot'; path: string }
   | { type: 'vars' }
   | { type: 'reset' }

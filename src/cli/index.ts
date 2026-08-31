@@ -206,6 +206,24 @@ program
   .action(async (target?: string) => process.exit(await session.goSurface('storefront', target)));
 
 program
+  .command('suite')
+  .description('Run every case in a CSV through the live browser session')
+  .requiredOption('--csv <file>', 'case file in the sheet column format')
+  .option('--id <ids...>', 'only these case IDs')
+  .option('--tag <tags...>', 'only cases with these tags')
+  .option('--suite <suite>', 'only this suite')
+  .option('--shots', 'screenshot every step, not just failures')
+  .action(async (opts) => {
+    const { runSuite } = await import('./suite.js');
+    process.exit(await runSuite(opts));
+  });
+
+program
+  .command('viewport <preset>')
+  .description('Resize for responsive checks: mobile | tablet | desktop | wide | 412x915')
+  .action(async (preset: string) => process.exit(await session.viewport(preset)));
+
+program
   .command('shot <path>')
   .description('Screenshot the current surface')
   .action(async (path: string) => process.exit(await session.shot(path)));

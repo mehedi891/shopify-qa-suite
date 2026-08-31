@@ -1,0 +1,17 @@
+ID,Title,Suite,Tags,Surface,Precondition,Steps,Expected Result,Teardown,Enabled
+OR-001,Daily order limit value can be changed and saved,limits,"smoke,p0",admin,,"open the app
+go to ""/apps/order-scheduler-limit-sales-dev/app/limits""
+check ""Daily Order Limit""
+fill css=input[type=number] with ""2""
+click ""Save Changes""","expect ""Current: 0 / 2"" to be visible","go to ""/apps/order-scheduler-limit-sales-dev/app/limits""
+fill css=input[type=number] with ""1""
+click ""Save Changes""",TRUE
+OR-002,Storefront badge reflects the admin daily limit,limits,"smoke,cross-surface,p0",storefront,,"go to the product page for ""Mix & Match #1""","expect ""orders remaining today"" to be visible",,TRUE
+OR-003,Add to cart succeeds from the product page,cart,"smoke,p0",storefront,,"go to the product page for ""The Collection Snowboard: Hydrogen""
+click [data-testid=""standalone-add-to-cart""]
+go to ""/cart""","expect ""Your cart is empty"" to be hidden",,TRUE
+OR-004,No cart error appears when adding to cart,cart,"regression,p0",storefront,,"go to the product page for ""The Collection Snowboard: Hydrogen""
+click [data-testid=""standalone-add-to-cart""]","expect ""Cart Error"" to be hidden",,TRUE
+OR-005,Limit badge and Add to cart stay visible on a mobile viewport,design,"responsive,p1",storefront,,"set viewport to mobile
+go to the product page for ""Mix & Match #1""","expect ""orders remaining today"" to be visible
+expect ""Add to cart"" to be visible","set viewport to desktop",TRUE

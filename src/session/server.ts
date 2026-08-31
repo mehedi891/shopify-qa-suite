@@ -20,6 +20,18 @@ const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopif
 
 const safeName = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, '_');
 
+const VIEWPORTS: Record<string, [number, number]> = {
+  mobile: [390, 844], 'mobile-small': [360, 640], tablet: [820, 1180],
+  desktop: [1440, 900], wide: [1920, 1080],
+};
+
+function parseViewport(value: string): [number, number] | undefined {
+  const named = VIEWPORTS[value.trim().toLowerCase()];
+  if (named) return named;
+  const m = /^(\d+)\s*[x×]\s*(\d+)$/i.exec(value.trim());
+  return m ? [Number(m[1]), Number(m[2])] : undefined;
+}
+
 /** Detection survives a session restart — re-detecting needs the app reopened. */
 const DETECTED_FILE = '.cache/detected.json';
 
@@ -149,6 +161,7 @@ export class QaSession {
       case 'play': return this.play(cmd);
       case 'goto': return this.goto(cmd.surface, cmd.target);
       case 'switch': return this.switchTo(cmd.surface);
+      case 'viewport': return this.setViewport(cmd.width, cmd.height);
       case 'screenshot': return this.screenshot(cmd.path);
       case 'vars': return { ok: true, data: this.testContext.snapshot() };
       case 'reset':
@@ -225,6 +238,11 @@ export class QaSession {
     if (kind === 'switch' && step.action?.surface) return this.switchTo(step.action.surface);
     if (kind === 'open') return this.openApp();
     if (kind === 'goto') return this.goto(this.current, this.testContext.resolve(step.action?.value ?? ''));
+    if (kind === 'viewport') {
+      const size = parseViewport(step.action?.value ?? '');
+      if (!size) return { ok: false, message: `Unknown viewport "${step.action?.value}". Use mobile, tablet, desktop, wide, or WxH.` };
+      return this.setViewport(size[0], size[1]);
+    }
     if (kind === 'dialog') {
       if (step.action?.value === 'dismiss') this.dialogs.expectDismiss(); else this.dialogs.expectAccept();
       return { ok: true, message: `next dialog will be ${step.action?.value ?? 'accepted'}` };
@@ -382,6 +400,17 @@ export class QaSession {
     this.persist();
     await this.page.bringToFront().catch(() => {});
     return { ok: true, message: `switched to ${surface} (${this.page.url()})` };
+  }
+
+  /**
+   * Resize for responsive checks. Design breaks are overwhelmingly a
+   * narrow-viewport problem, and they are invisible at desktop width.
+   */
+  private async setViewport(width: number, height: number): Promise<CommandResult> {
+    for (const page of [this.adminPage, this.storefrontPage]) {
+      if (page) await page.setViewportSize({ width, height }).catch(() => {});
+    }
+    return { ok: true, message: `viewport ${width}×${height}` };
   }
 
   private async screenshot(path: string): Promise<CommandResult> {

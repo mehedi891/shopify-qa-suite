@@ -20,7 +20,8 @@ export type ActionKind =
   | 'wait'        // wait for something visible
   | 'switch'      // switch surface
   | 'save'        // save a value into the variable bag
-  | 'dialog';     // accept / dismiss a native dialog
+  | 'dialog'      // accept / dismiss a native dialog
+  | 'viewport';   // resize, for responsive checks
 
 export type AssertionKind =
   | 'visible'

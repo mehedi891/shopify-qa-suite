@@ -105,6 +105,7 @@ export async function performAction(
       // handled by the dialog listener installed on the page; nothing to do here
       return;
 
+    case 'viewport':
     case 'open':
     case 'switch':
       throw new ActionError(`"${action.kind}" is handled by the runner, not the action layer.`);

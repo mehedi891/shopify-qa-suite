@@ -275,3 +275,33 @@ describe('locator cache', () => {
   }, 60_000);
 });
 
+
+describe('hidden assertions', () => {
+  it('passes when the element is absent entirely, not just styled hidden', async () => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto(`${server.url}/admin.html`);
+
+    // nothing on this page says anything of the sort — absent is hidden
+    const { results } = await runSteps('expect "No Such Text Anywhere" to be hidden', {
+      page, frames: adminFrames(page), testCaseId: 'TC-HIDDEN',
+    });
+    expect(results[0]!.status).toBe('passed');
+    expect(results[0]!.resolvedLocator).toBe('(absent)');
+
+    await page.close();
+    await ctx.close();
+  }, 60_000);
+
+  it('still fails when the element is present and visible', async () => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto(`${server.url}/admin.html`);
+    const { results } = await runSteps('expect "Test Store · Admin" to be hidden in host', {
+      page, frames: adminFrames(page), testCaseId: 'TC-HIDDEN2',
+    });
+    expect(results[0]!.status).toBe('failed');
+    await page.close();
+    await ctx.close();
+  }, 60_000);
+});

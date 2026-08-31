@@ -127,6 +127,10 @@ function parseAction(line: string, frame: FrameHint): Action | null {
   m = /^(?:go\s+to|open|navigate\s+to|visit)\s+(.+)$/i.exec(s);
   if (m) return { kind: 'goto', value: unquote(m[1]!) };
 
+  // set viewport to mobile | resize to 412x915
+  m = /^(?:set\s+(?:the\s+)?viewport\s+to|resize\s+to|view\s+(?:on|at))\s+(.+)$/i.exec(s);
+  if (m) return { kind: 'viewport', value: unquote(m[1]!).toLowerCase() };
+
   // reload
   if (/^reload(\s+the\s+page)?$/i.test(s)) return { kind: 'reload' };
 

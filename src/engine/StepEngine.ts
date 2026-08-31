@@ -35,6 +35,11 @@ export class StepEngine {
     try {
       const target = step.kind === 'action' ? step.action?.target : step.assertion?.target;
 
+      // An element that is absent IS hidden — the commonest way, in fact. So a
+      // "hidden" assertion must not fail merely because the target could not be
+      // resolved, or every genuinely-removed element reports a false failure.
+      const isHiddenAssertion = step.kind === 'assertion' && step.assertion?.kind === 'hidden';
+
       if (target) {
         // A label may itself contain a variable — `expect "{bannerText}" to be
         // visible` is the whole point of a cross-surface case. Resolve it before
@@ -45,13 +50,28 @@ export class StepEngine {
           ? { ...target, raw: this.deps.context.resolve(target.raw) }
           : target;
 
-        const resolution = await resolveTarget(step, searchTarget, testCaseId, {
-          frames: this.deps.frames,
-          cache: this.deps.cache,
-          planner: this.deps.planner,
-          timeoutMs: this.deps.timeoutMs,
-          cacheable: !hasVariable,
-        });
+        let resolution;
+        try {
+          resolution = await resolveTarget(step, searchTarget, testCaseId, {
+            frames: this.deps.frames,
+            cache: this.deps.cache,
+            planner: this.deps.planner,
+            timeoutMs: isHiddenAssertion
+              // nothing to wait for: we want it gone, so fail fast
+              ? Math.min(this.deps.timeoutMs, 3_000)
+              : this.deps.timeoutMs,
+            cacheable: !hasVariable,
+          });
+        } catch (err) {
+          if (isHiddenAssertion) {
+            result.locatorSource = 'explicit';
+            result.resolvedLocator = '(absent)';
+            result.durationMs = Date.now() - started;
+            await this.deps.onStep?.(result);
+            return result; // absent → hidden → passed
+          }
+          throw err;
+        }
         result.locatorSource = resolution.source;
         result.resolvedLocator = `${resolution.frameName}:${describeSpec(resolution.spec)}`;
 
