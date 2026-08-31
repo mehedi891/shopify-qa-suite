@@ -57,6 +57,15 @@ export async function launchBrowser(opts: LaunchOptions): Promise<LaunchedBrowse
       close: () => context.close(),
     };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/already in use|Opening in existing browser session|ProcessSingleton/i.test(message)) {
+      throw new Error(
+        `The browser profile at ${opts.profileDir} is already open in another Chrome window.\n\n` +
+        `  • If a previous session's window is still open, close it, or run \`qa stop\`.\n` +
+        `  • If it is orphaned, quit that Chrome window manually.\n\n` +
+        `Only one session can use a profile at a time — that is Chrome's rule, not ours.`,
+      );
+    }
     if (useChrome) {
       // Chrome not installed — fall back rather than dead-end, but say so
       console.error(

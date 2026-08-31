@@ -5,6 +5,7 @@ import { QaSession, type SessionOptions } from '../session/server.js';
 import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
 import { RESULT_HEADER, toMarkdownTable, writeResultsCsv, type ResultRecord } from '../report/csv.js';
+import type { PlayedStep } from '../session/protocol.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
 const RESULTS_PATH = '.cache/session-results.json';
@@ -113,6 +114,61 @@ export async function snapshot(frame?: string, maxChars?: number): Promise<numbe
 export async function doStep(step: string, opts: { case?: string } = {}): Promise<number> {
   const res = await send({ type: 'do', step, testCaseId: opts.case });
   console.log(res.ok ? `${pc.green('✓')} ${res.message}` : `${pc.red('✗')} ${res.message}`);
+  return res.ok ? 0 : 1;
+}
+
+/**
+ * `qa play` — run a whole test case in one call, and optionally record its
+ * verdict. This is the command to reach for: one round trip instead of one per
+ * step, with a screenshot captured at the moment of failure.
+ */
+export async function play(opts: {
+  steps: string[];
+  case?: string;
+  title?: string;
+  suite?: string;
+  tags?: string;
+  record?: boolean;
+  shots?: boolean;
+  keepGoing?: boolean;
+}): Promise<number> {
+  const started = Date.now();
+  const res = await send({
+    type: 'play',
+    steps: opts.steps,
+    testCaseId: opts.case,
+    stopOnFailure: !opts.keepGoing,
+    shotEvery: opts.shots,
+  });
+  const data = res.data as { steps: PlayedStep[]; url: string; surface: string };
+
+  for (const s of data.steps) {
+    if (s.skipped) { console.log(`${pc.dim('○')} ${pc.dim(s.step)} ${pc.dim('(skipped)')}`); continue; }
+    if (s.ok) {
+      const via = s.locator ? pc.dim(` · ${s.locator}`) : '';
+      console.log(`${pc.green('✓')} ${s.step}${via} ${pc.dim(`${s.durationMs}ms`)}`);
+    } else {
+      console.log(`${pc.red('✗')} ${s.step}`);
+      for (const line of (s.detail ?? '').split('\n').slice(0, 6)) console.log(pc.dim(`    ${line}`));
+      if (s.screenshot) console.log(pc.yellow(`    screenshot: ${s.screenshot}`));
+    }
+  }
+  console.log(pc.dim(`\n${data.surface} · ${data.url}`));
+
+  if (opts.record && opts.case) {
+    const failing = data.steps.find((s) => !s.ok && !s.skipped);
+    await record({
+      id: opts.case,
+      title: opts.title ?? '',
+      suite: opts.suite,
+      tags: opts.tags,
+      status: res.ok ? 'PASS' : 'FAIL',
+      failedStep: failing?.step,
+      reason: failing?.detail?.split('\n')[0],
+      durationSeconds: Number(((Date.now() - started) / 1000).toFixed(1)),
+      screenshot: failing?.screenshot,
+    });
+  }
   return res.ok ? 0 : 1;
 }
 

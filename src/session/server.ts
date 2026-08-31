@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { writeFileSync, rmSync, mkdirSync } from 'node:fs';
+import { writeFileSync, rmSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { BrowserContext, Page } from 'playwright';
 import { launchBrowser, type LaunchMode, type LaunchedBrowser } from './launch.js';
@@ -12,10 +12,31 @@ import { AgentPlanner } from '../engine/Planner.js';
 import { TestContext } from '../runner/Context.js';
 import { DialogController } from '../runner/dialogs.js';
 import { parseStepLine } from '../source/parser.js';
-import { SESSION_FILE, type Command, type CommandResult, type SessionInfo } from './protocol.js';
+import { SESSION_FILE, type Command, type CommandResult, type PlayedStep, type SessionInfo } from './protocol.js';
 import { slug } from '../surfaces/StorefrontSurface.js';
 
 const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopifycloud\.com)$/;
+
+const safeName = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+/** Detection survives a session restart — re-detecting needs the app reopened. */
+const DETECTED_FILE = '.cache/detected.json';
+
+interface Detected { store?: string; appHandle?: string; appHost?: string }
+
+function loadDetected(): Detected {
+  if (!existsSync(DETECTED_FILE)) return {};
+  try {
+    return JSON.parse(readFileSync(DETECTED_FILE, 'utf8')) as Detected;
+  } catch {
+    return {};
+  }
+}
+
+function saveDetected(d: Detected): void {
+  mkdirSync('.cache', { recursive: true });
+  writeFileSync(DETECTED_FILE, JSON.stringify(d, null, 2));
+}
 
 /** A browser that outlives a single command, so one human login covers a whole run. */
 export interface SessionOptions {
@@ -70,9 +91,13 @@ export class QaSession {
     const addr = server.address();
     if (typeof addr === 'string' || !addr) throw new Error('session server failed to bind');
 
+    // carry forward what a previous session detected, so a restart does not
+    // silently produce URLs like https:///products/x
+    const remembered = loadDetected();
     this.info = {
       pid: process.pid, port: addr.port, startedAt: new Date().toISOString(),
       surface: 'admin', browser: this.launched.description,
+      store: remembered.store, appHandle: remembered.appHandle, appHost: remembered.appHost,
     };
     this.persist();
 
@@ -119,6 +144,7 @@ export class QaSession {
       case 'frames': return { ok: true, data: this.page.frames().map((f) => ({ url: f.url(), name: f.name() })) };
       case 'snapshot': return this.snapshot(cmd.frame ?? 'auto', cmd.maxChars ?? 18_000);
       case 'do': return this.doStep(cmd.step, cmd.testCaseId, cmd.index);
+      case 'play': return this.play(cmd);
       case 'goto': return this.goto(cmd.surface, cmd.target);
       case 'switch': return this.switchTo(cmd.surface);
       case 'screenshot': return this.screenshot(cmd.path);
@@ -128,7 +154,14 @@ export class QaSession {
         this.stepIndex = 0;
         return { ok: true, message: 'variables cleared' };
       case 'stop':
-        setTimeout(() => { rmSync(SESSION_FILE, { force: true }); process.exit(0); }, 50);
+        // close the browser we opened, or the profile stays locked and the
+        // next `qa start` fails with "profile already in use". In attach mode
+        // we only detach — never close a browser we did not open.
+        setTimeout(() => {
+          void this.launched.close()
+            .catch(() => {})
+            .finally(() => { rmSync(SESSION_FILE, { force: true }); process.exit(0); });
+        }, 50);
         return { ok: true, message: 'stopping' };
     }
   }
@@ -155,6 +188,7 @@ export class QaSession {
       .filter((u) => !SHOPIFY_HOSTS.test(u.hostname));
     if (foreign.length > 0) this.info.appHost = foreign[0]!.host;
 
+    saveDetected({ store: this.info.store, appHandle: this.info.appHandle, appHost: this.info.appHost });
     this.persist();
     return {
       ok: Boolean(this.info.store),
@@ -216,6 +250,66 @@ export class QaSession {
     };
   }
 
+  /**
+   * Run a whole test case in one call.
+   *
+   * The per-step round trip (process spawn + HTTP) dominates the cost of
+   * driving this from a chat, so a ten-step case done one command at a time is
+   * ten times slower than it needs to be. Everything here runs server-side in
+   * the live browser, and a failure screenshots itself so the next thing the
+   * caller needs is already on disk.
+   */
+  private async play(cmd: {
+    steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean;
+  }): Promise<CommandResult> {
+    const caseId = cmd.testCaseId ?? 'SESSION';
+    const stopOnFailure = cmd.stopOnFailure !== false;
+    const shotDir = cmd.shotDir ?? '.cache/shots';
+    const played: PlayedStep[] = [];
+    let failed = false;
+
+    for (const [i, raw] of cmd.steps.entries()) {
+      if (failed && stopOnFailure) {
+        played.push({ step: raw, ok: false, skipped: true, durationMs: 0 });
+        continue;
+      }
+      const started = Date.now();
+      const res = await this.doStep(raw, caseId, i);
+      const durationMs = Date.now() - started;
+      const data = res.data as { locator?: string } | undefined;
+
+      const entry: PlayedStep = {
+        step: raw, ok: res.ok, detail: res.message, locator: data?.locator, durationMs,
+      };
+
+      if (!res.ok) {
+        failed = true;
+        // capture the moment of failure now: asking for it later means the
+        // page has already moved on
+        const path = `${shotDir}/${safeName(caseId)}-step-${String(i).padStart(2, '0')}-failed.png`;
+        try {
+          mkdirSync(shotDir, { recursive: true });
+          await this.page.screenshot({ path });
+          entry.screenshot = path;
+        } catch { /* a closed page is not worth failing the run over */ }
+      } else if (cmd.shotEvery) {
+        const path = `${shotDir}/${safeName(caseId)}-step-${String(i).padStart(2, '0')}.png`;
+        try {
+          mkdirSync(shotDir, { recursive: true });
+          await this.page.screenshot({ path });
+          entry.screenshot = path;
+        } catch { /* ignore */ }
+      }
+      played.push(entry);
+    }
+
+    return {
+      ok: !failed,
+      message: failed ? 'case failed' : 'all steps passed',
+      data: { steps: played, url: this.page.url(), surface: this.current },
+    };
+  }
+
   private async openApp(): Promise<CommandResult> {
     if (!this.info.store || !this.info.appHandle) {
       return { ok: false, message: 'Store or app unknown. Open your app in the browser, then run `qa detect`.' };
@@ -238,7 +332,13 @@ export class QaSession {
 
   private resolveUrl(surface: SurfaceName, target: string): string {
     if (/^https?:\/\//.test(target)) return target;
-    const store = this.info.store ?? '';
+    const store = this.info.store;
+    if (!store) {
+      throw new Error(
+        'Store unknown, so "' + target + '" cannot be turned into a URL.\n' +
+        '  Open your app in the admin window and run `qa detect` first.',
+      );
+    }
     if (surface === 'admin') {
       const base = `https://admin.shopify.com/store/${store.replace('.myshopify.com', '')}`;
       return target.startsWith('/') ? `${base}${target}` : `${base}/${slug(target)}`;

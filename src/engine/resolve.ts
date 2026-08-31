@@ -121,19 +121,23 @@ export async function resolveTarget(
     let ambiguous: { spec: LocatorSpec; name: string } | undefined;
     for (const { name, root } of roots) {
       for (const spec of candidates) {
-        const count = await safeCount(buildLocator(root, spec));
+        // only visible elements count: a hidden duplicate is never what the
+        // step meant, and clicking one times out instead of failing usefully
+        const visibleSpec: LocatorSpec = { ...spec, visible: true };
+        const count = await safeCount(buildLocator(root, visibleSpec));
         if (count === 1) {
-          const locator = buildLocator(root, spec);
           const source: LocatorSource = cached ? 'healed' : 'planned';
-          if (cacheable) cache.set(cacheKey, { spec, frame: name, via: 'heuristic', savedAt: new Date().toISOString() });
-          return { locator, spec, frameName: name, source };
+          if (cacheable) cache.set(cacheKey, { spec: visibleSpec, frame: name, via: 'heuristic', savedAt: new Date().toISOString() });
+          return { locator: buildLocator(root, visibleSpec), spec: visibleSpec, frameName: name, source };
         }
-        // remember the first multi-match in case nothing resolves uniquely
-        if (count > 1 && !ambiguous) ambiguous = { spec, name };
+        // Remember the strongest strategy that matched at all. Strategy
+        // strength beats uniqueness: two visible "Add to cart" buttons should
+        // pick one of them, not fall through to a weaker strategy that happens
+        // to match a single unclickable element.
+        if (count > 1 && !ambiguous) ambiguous = { spec: visibleSpec, name };
       }
     }
-    if (ambiguous && Date.now() + 300 >= heuristicDeadline) {
-      // several match and time is up: take the first, and record the choice
+    if (ambiguous) {
       const spec: LocatorSpec = { ...ambiguous.spec, nth: 0 };
       const named = roots.find((r) => r.name === ambiguous!.name)!;
       if (cacheable) cache.set(cacheKey, { spec, frame: named.name, via: 'heuristic', savedAt: new Date().toISOString() });

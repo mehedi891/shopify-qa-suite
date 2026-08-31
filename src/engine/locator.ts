@@ -26,6 +26,8 @@ export interface LocatorSpec {
   /** Raw selector, for strategy 'css'. */
   selector?: string;
   exact?: boolean;
+  /** Restrict to visible elements — a hidden duplicate is never what a step meant. */
+  visible?: boolean;
   /** Disambiguates when several elements match. */
   nth?: number;
 }
@@ -60,6 +62,7 @@ export function buildLocator(root: LocatorRoot, spec: LocatorSpec): Locator {
       locator = root.getByTitle(spec.name ?? '', { exact: spec.exact });
       break;
   }
+  if (spec.visible) locator = locator.filter({ visible: true });
   return spec.nth === undefined ? locator : locator.nth(spec.nth);
 }
 

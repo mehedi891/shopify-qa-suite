@@ -24,6 +24,7 @@ export type Command =
   | { type: 'snapshot'; frame?: 'app' | 'host' | 'page' | 'auto'; maxChars?: number }
   | { type: 'frames' }
   | { type: 'do'; step: string; testCaseId?: string; index?: number }
+  | { type: 'play'; steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean }
   | { type: 'goto'; surface: 'admin' | 'storefront'; target?: string }
   | { type: 'switch'; surface: 'admin' | 'storefront' }
   | { type: 'screenshot'; path: string }
@@ -35,6 +36,16 @@ export interface CommandResult {
   ok: boolean;
   message?: string;
   data?: unknown;
+}
+
+export interface PlayedStep {
+  step: string;
+  ok: boolean;
+  skipped?: boolean;
+  detail?: string;
+  locator?: string;
+  durationMs: number;
+  screenshot?: string;
 }
 
 export const SESSION_FILE = '.qa-session.json';

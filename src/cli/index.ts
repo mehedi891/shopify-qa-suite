@@ -167,6 +167,30 @@ program
     process.exit(await session.doStep(step, opts)));
 
 program
+  .command('play [steps...]')
+  .description('Run a whole test case in one call (steps as args, or --file)')
+  .option('--file <path>', 'read steps from a file, one per line')
+  .option('--case <id>', 'test case id')
+  .option('--title <title>', 'test case title')
+  .option('--suite <suite>', 'suite')
+  .option('--tags <tags>', 'comma-separated tags')
+  .option('--record', 'record the verdict automatically')
+  .option('--shots', 'screenshot every step, not just failures')
+  .option('--keep-going', 'do not stop at the first failure')
+  .action(async (steps: string[], opts) => {
+    const { readFileSync } = await import('node:fs');
+    const fromFile = opts.file
+      ? readFileSync(opts.file, 'utf8').split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean)
+      : [];
+    const all = [...fromFile, ...steps];
+    if (all.length === 0) {
+      console.error(pc.red('No steps given. Pass them as arguments or use --file.'));
+      process.exit(1);
+    }
+    process.exit(await session.play({ ...opts, steps: all }));
+  });
+
+program
   .command('admin [target]')
   .description('Switch to the admin, optionally navigating somewhere')
   .action(async (target?: string) => process.exit(await session.goSurface('admin', target)));

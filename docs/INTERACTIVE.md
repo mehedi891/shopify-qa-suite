@@ -100,13 +100,52 @@ qa start --chromium
 | `qa status` | Current store, app, surface and URL |
 | `qa snapshot [--frame app\|host]` | Accessibility tree per frame — **how the agent sees the page** |
 | `qa frames` | Every frame URL, for debugging the app iframe |
-| `qa do '<step>'` | Run one plain-English step |
+| `qa play [steps...]` | **Run a whole case in one call**, screenshot on failure, record the verdict |
+| `qa do '<step>'` | Run one step — for exploring, not for running known cases |
 | `qa admin [target]` / `qa storefront [target]` | Switch surface, optionally navigate |
 | `qa shot <path>` | Screenshot the current surface |
 | `qa vars-reset` | Clear saved variables between cases |
 | `qa record <id> <PASS\|FAIL\|BLOCKED\|SKIPPED>` | Log a verdict |
 | `qa results [--csv path]` | Table in chat + CSV file |
 | `qa stop` | Close the browser |
+
+## Run a whole case in one command
+
+`qa do` runs one step. Driving a ten-step case that way costs ten process spawns
+and ten round trips, which dominates the actual browser time. **`qa play` runs
+the whole case server-side in one call** and records the verdict:
+
+```bash
+qa play --case TC-021 --record --title "Banner appears on the storefront" --suite widget \
+  'open the app' \
+  'click "Settings"' \
+  'turn on "Enable discount banner"' \
+  'fill "Banner text" with "Free shipping {random}"' \
+  'click "Save"' \
+  'expect toast "Settings saved"' \
+  'save the value of "Banner text" as bannerText' \
+  'switch to storefront' \
+  'go to the product page for "Test Product"' \
+  'expect "{bannerText}" to be visible'
+```
+
+```console
+✓ switch to storefront 1172ms
+✓ go to the product page for "Mix & Match #1" 586ms
+✓ expect "1 orders remaining today" to be visible · page:text="1 orders remaining today" 88ms
+✗ expect "Your cart is empty" to be hidden
+    Expected "Your cart is empty" to be hidden, but it was visible.
+    screenshot: .cache/shots/TC-003-step-04-failed.png
+```
+
+It stops at the first failure (`--keep-going` to continue), **screenshots the
+moment of failure automatically** — asking for a screenshot afterwards is too
+late, the page has moved on — and with `--record` writes the verdict straight
+into the results. `--file steps.txt` reads steps from a file, `--shots`
+captures every step, not just failures.
+
+Reach for `qa play` by default. Use `qa do` and `qa snapshot` when you are
+exploring a page or diagnosing a failure, not when running a known case.
 
 ## A real sequence
 
