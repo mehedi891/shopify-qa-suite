@@ -20,6 +20,24 @@ const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopif
 
 const safeName = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, '_');
 
+/**
+ * Every other frame on the page, as searchable roots.
+ *
+ * A Frame exposes the same query methods as a Page, so it can be searched
+ * directly — which is the only way to reach a picker or modal that Shopify
+ * renders one level deeper than the app iframe.
+ */
+function nestedFrames(page: Page, skipHosts: (string | undefined)[]): NamedRoot[] {
+  const skip = skipHosts.filter(Boolean) as string[];
+  // Deliberately keeps about:blank and about:srcdoc frames: Shopify renders the
+  // resource picker's list into exactly those, so excluding them makes the
+  // picker unreachable — which looks like "the checkbox does not exist".
+  return page.frames()
+    .filter((f) => f !== page.mainFrame())
+    .filter((f) => !skip.some((h) => f.url().includes(h)))
+    .map((f, i) => ({ name: `nested${i}`, root: f }));
+}
+
 const VIEWPORTS: Record<string, [number, number]> = {
   mobile: [390, 844], 'mobile-small': [360, 640], tablet: [820, 1180],
   desktop: [1440, 900], wide: [1920, 1080],
@@ -139,13 +157,16 @@ export class QaSession {
     const isAdmin = this.current === 'admin';
     return {
       async roots(hint): Promise<NamedRoot[]> {
-        if (!isAdmin) return [{ name: 'page', root: page }];
+        if (!isAdmin) return [{ name: 'page', root: page }, ...nestedFrames(page, [])];
         const selector = appHost ? `iframe[src*="${appHost}"]` : 'iframe';
         const app: NamedRoot = { name: 'app', root: page.frameLocator(selector) };
         const host: NamedRoot = { name: 'host', root: page };
         if (hint === 'app') return [app];
         if (hint === 'host') return [host];
-        return [app, host];
+        // Shopify's resource picker, and some App Bridge modals, render in a
+        // frame nested inside the admin — neither the app frame nor the host
+        // page can see into it, so search those too.
+        return [app, host, ...nestedFrames(page, [appHost])];
       },
     };
   }

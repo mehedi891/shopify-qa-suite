@@ -88,7 +88,10 @@ export function rowsToTestCases(header: string[], rows: RawRow[]): ParsedSheet {
     let index = 0;
     const collect = (col: string, origin: Step['origin']): Step[] => {
       const res = parseStepBlock(cell(row, col), surface, origin, index);
-      res.errors.forEach((e) => add(col, e.message, e.line));
+      // Precondition is documented as free text that MAY be written as steps,
+      // so prose there is a note to the reader, not a broken test.
+      const severity: ParseIssue['severity'] = origin === 'precondition' ? 'warning' : 'error';
+      res.errors.forEach((e) => add(col, e.message, e.line, severity));
       surface = res.endSurface;
       index += res.steps.length;
       return res.steps;

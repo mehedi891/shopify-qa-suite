@@ -57,7 +57,20 @@ export async function performAction(
       const el = need();
       const want = action.state ?? true;
       // setChecked handles switches and checkboxes and is a no-op if already right
-      await el.setChecked(want, t);
+      try {
+        await el.setChecked(want, t);
+      } catch (err) {
+        // Polaris — and most component kits — render a visually-hidden <input>
+        // behind a styled span. The input is the accessible element but is not
+        // clickable, so a normal check times out. Click its label instead,
+        // which is exactly what a real user clicks.
+        if (!isActionabilityTimeout(err)) throw err;
+        const clicked = await clickAssociatedLabel(page, el, timeoutMs);
+        if (!clicked) await el.setChecked(want, { ...t, force: true });
+        // verify we ended up in the state the step asked for
+        const now = await el.isChecked().catch(() => want);
+        if (now !== want) await el.setChecked(want, { ...t, force: true });
+      }
       return;
     }
 
@@ -115,6 +128,38 @@ export async function performAction(
       throw new ActionError(`Unsupported action: ${String(exhaustive)}`);
     }
   }
+}
+
+function isActionabilityTimeout(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /Timeout .*exceeded|not visible|not stable|intercepts pointer events/i.test(msg);
+}
+
+/**
+ * Click the <label> tied to a hidden input, the way a person would.
+ * Returns false when there is no usable label to click.
+ */
+async function clickAssociatedLabel(page: Page, input: Locator, timeoutMs: number): Promise<boolean> {
+  const id = await input.getAttribute('id').catch(() => null);
+  if (id) {
+    const escaped = id.replace(/["\\]/g, '\\$&');
+    const label = page.locator(`label[for="${escaped}"]`).first();
+    if (await label.count().catch(() => 0)) {
+      try {
+        await label.click({ timeout: Math.min(timeoutMs, 5_000) });
+        return true;
+      } catch { /* fall through to the wrapper attempt */ }
+    }
+  }
+  // no matching label: click the nearest clickable ancestor instead
+  try {
+    const wrapper = input.locator('xpath=ancestor::label[1] | xpath=ancestor::*[@role="checkbox" or @role="switch"][1]').first();
+    if (await wrapper.count().catch(() => 0)) {
+      await wrapper.click({ timeout: Math.min(timeoutMs, 5_000) });
+      return true;
+    }
+  } catch { /* nothing clickable found */ }
+  return false;
 }
 
 /** Read an element's value the way a user would perceive it. */

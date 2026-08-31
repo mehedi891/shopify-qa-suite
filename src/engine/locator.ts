@@ -102,6 +102,8 @@ const ROLES_BY_ASSERTION: Partial<Record<AssertionKind, string[]>> = {
   hidden: [],
   text: [],
   count: ['listitem', 'row'],
+  enabled: ['button', 'link', 'textbox', 'checkbox', 'switch'],
+  disabled: ['button', 'link', 'textbox', 'checkbox', 'switch'],
 };
 
 export interface CandidateOptions {

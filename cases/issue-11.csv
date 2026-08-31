@@ -1,0 +1,6 @@
+ID,Title,Suite,Tags,Surface,Precondition,Steps,Expected Result,Teardown,Enabled
+ISSUE-11A,Admin should block saving a minimum order quantity above the max quantity limits,limits,"bug,p0",admin,Needs a product limit with Qty Daily 50 / Weekly 70 / Monthly 90 and Min per order 200,"go to ""/apps/order-scheduler-limit-sales-dev/app/products""
+click ""Individual Products""","expect ""Minimum order quantity cannot exceed"" to be visible",,TRUE
+ISSUE-11B,Storefront currently disables Add to cart when limits conflict (documents the bug),limits,"bug,p0,cross-surface",storefront,,"go to the product page for ""Mix & Match #1""
+wait for ""Minimum order: 200 units""","expect ""Minimum order: 200 units"" to be visible
+expect [data-testid=""standalone-add-to-cart""] to be disabled",,TRUE

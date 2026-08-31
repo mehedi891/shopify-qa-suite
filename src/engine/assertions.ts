@@ -66,6 +66,14 @@ export async function checkAssertion(
         await expect(page).toHaveURL(new RegExp(escapeRegExp(expected ?? '')), t);
         return;
 
+      case 'enabled':
+        await expect(need().first()).toBeEnabled(t);
+        return;
+
+      case 'disabled':
+        await expect(need().first()).toBeDisabled(t);
+        return;
+
       case 'toast':
         // toasts may render in the app frame or the host admin frame; the
         // resolver already searched both, so by here we just verify it showed
@@ -102,6 +110,8 @@ function summarise(assertion: Assertion, expected: string | undefined, err: unkn
     case 'count': return `Expected ${assertion.count} of ${what}. ${detail}`;
     case 'url': return `Expected the url to contain "${expected}". ${detail}`;
     case 'toast': return `Expected a toast saying "${expected}". ${detail}`;
+    case 'enabled': return `Expected ${what} to be enabled, but it was disabled. ${detail}`;
+    case 'disabled': return `Expected ${what} to be disabled, but it was enabled. ${detail}`;
     default: return detail;
   }
 }

@@ -84,6 +84,15 @@ function parseAssertion(body: string, frame: FrameHint): Assertion | null {
     return { kind: 'text', target: makeTarget(m[1]!, frame), expected: unquote(m[2]!), negated: false };
   }
 
+  // expect "Add to cart" to be enabled | disabled
+  m = /^(.+?)\s+(?:to\s+|is\s+)?(?:be\s+)?(not\s+)?(enabled|disabled|clickable|greyed out|grayed out)$/i.exec(s);
+  if (m) {
+    const word = m[3]!.toLowerCase();
+    const positive = word === 'enabled' || word === 'clickable';
+    const want = positive !== Boolean(m[2]);
+    return { kind: want ? 'enabled' : 'disabled', target: makeTarget(m[1]!, frame), negated: false };
+  }
+
   // expect "X" to be visible | hidden | not visible | to not be visible
   m = /^(.+?)\s+(?:to\s+|is\s+|are\s+)?((?:not\s+)?(?:be\s+)?(?:not\s+)?)(visible|hidden|shown|present|displayed|gone|missing)$/i.exec(s);
   if (m) {

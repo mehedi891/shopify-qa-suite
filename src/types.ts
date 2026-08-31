@@ -31,6 +31,8 @@ export type AssertionKind =
   | 'count'       // n items
   | 'url'         // url contains/matches
   | 'toast'
+  | 'enabled'
+  | 'disabled'
   | 'clipboard';
 
 /**
