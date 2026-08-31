@@ -185,6 +185,37 @@ The agent then runs `qa snapshot`, reads the real accessibility tree, and either
 retries with the correct label or uses an explicit selector. **This is the
 planner tier — performed by the agent in the chat rather than by an API call.**
 
+## Where results go, and where they are stored
+
+`qa results` writes a **self-contained report folder** and prints a table:
+
+```
+reports/2026-08-31T12-01-02/
+├── report.html          ← open in a browser; failures expanded, screenshots inline
+├── results.csv          ← 11 columns, opens in Sheets or Excel
+└── screenshots/         ← copies of every failure screenshot
+    └── OR-001-step-05-failed.png
+```
+
+Three destinations from one command:
+
+| Where | What | Lives |
+|---|---|---|
+| **The chat / terminal** | Markdown table, pass/fail per case | the transcript |
+| **CSV** | Every column, quoted properly | `reports/<timestamp>/results.csv` |
+| **HTML** | Failure reasons, failing step, screenshots inline | `reports/<timestamp>/report.html` |
+
+Screenshots are **copied** into the folder, not linked, and referenced by
+relative path — so the whole folder can be zipped and sent to someone, or
+attached to a ticket, and still works.
+
+`--csv <path>` puts the CSV somewhere specific (e.g. straight into a shared
+drive); `--dir <path>` moves the whole folder. `reports/` is gitignored, since
+a report is a run artifact rather than source.
+
+Working state during a run lives in `.cache/` (`session-results.json`,
+`shots/`, `session-locators.json`) — scratch, safe to delete between runs.
+
 ## Output
 
 `qa results` prints a table into the chat:

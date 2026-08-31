@@ -4,7 +4,8 @@ import pc from 'picocolors';
 import { QaSession, type SessionOptions } from '../session/server.js';
 import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
-import { RESULT_HEADER, toMarkdownTable, writeResultsCsv, type ResultRecord } from '../report/csv.js';
+import { toMarkdownTable, type ResultRecord } from '../report/csv.js';
+import { writeSessionReport } from '../report/SessionReport.js';
 import type { PlayedStep } from '../session/protocol.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
@@ -257,8 +258,11 @@ export async function record(input: ResultRecord): Promise<number> {
   return 0;
 }
 
-/** `qa results` — the whole run, as a markdown table and a CSV file. */
-export async function results(csvPath?: string): Promise<number> {
+/**
+ * `qa results` — the run in three places at once: a table in the terminal (and
+ * therefore in the chat), a CSV, and a self-contained HTML report folder.
+ */
+export async function results(csvPath?: string, dir?: string): Promise<number> {
   const records = loadRecords();
   if (records.length === 0) {
     console.log(pc.yellow('No results recorded yet.'));
@@ -271,9 +275,21 @@ export async function results(csvPath?: string): Promise<number> {
   const other = records.length - passed - failed;
   console.log(`\n${passed} passed · ${failed} failed${other ? ` · ${other} other` : ''}`);
 
-  const path = csvPath ?? `qa-results-${new Date().toISOString().slice(0, 10)}.csv`;
-  writeResultsCsv(path, records);
-  console.log(pc.dim(`\ncsv: ${path} (${RESULT_HEADER.length} columns, ${records.length} rows)`));
+  // a durable folder, not a scratch directory that later gets cleaned up
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const outDir = dir ?? `reports/${stamp}`;
+  let store: string | undefined;
+  let app: string | undefined;
+  try {
+    const info = readSession();
+    store = info.store;
+    app = info.appHandle;
+  } catch { /* no live session: the report is still worth writing */ }
+
+  const written = writeSessionReport(records, { dir: outDir, store, app, csvPath });
+  console.log(pc.dim(`\nreport: ${written.htmlPath}`));
+  console.log(pc.dim(`csv:    ${written.csvPath}`));
+  if (written.screenshots) console.log(pc.dim(`        ${written.screenshots} screenshot(s) copied alongside`));
   return failed > 0 ? 1 : 0;
 }
 

@@ -266,9 +266,11 @@ program
 
 program
   .command('results')
-  .description('Print the run as a table and write a CSV')
-  .option('--csv <path>', 'where to write the CSV')
-  .action(async (opts: { csv?: string }) => process.exit(await session.results(opts.csv)));
+  .description('Print the run as a table and write a CSV + HTML report folder')
+  .option('--csv <path>', 'where to write the CSV (default: inside the report folder)')
+  .option('--dir <path>', 'report folder (default: reports/<timestamp>)')
+  .action(async (opts: { csv?: string; dir?: string }) =>
+    process.exit(await session.results(opts.csv, opts.dir)));
 
 program
   .command('results-clear')
