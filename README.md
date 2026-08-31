@@ -32,9 +32,9 @@ Early. Built in phases — see [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION
 |---|---|---|
 | 0 | Scaffolding, CLI, config | ✅ done |
 | 2 | Sheet ingestion, step grammar, `qa validate` | ✅ done |
+| 3 | Step engine, locator cache, planner | ✅ done |
 | 1 | Shopify session reuse, App Bridge iframe, storefront | ⏸ blocked on dev-store access |
-| 3 | Step engine, locator cache, planner | ⏳ next |
-| 4 | Runner, reporting, sheet write-back | ⏳ |
+| 4 | Runner, reporting, sheet write-back | ⏳ next |
 | 5 | Fixtures, Slack, CI | ⏳ |
 
 Phase 1 needs credentials — see the access checklist in [docs/SETUP.md](docs/SETUP.md#0-what-i-need-from-you-to-start-access-checklist).
@@ -44,8 +44,14 @@ Phase 1 needs credentials — see the access checklist in [docs/SETUP.md](docs/S
 ```bash
 npm install
 npm run validate -- --csv fixtures/sample-test-cases.csv --verbose
-npm test
+npx playwright install chromium
+npm test        # includes browser tests against local fixture pages
 ```
+
+The engine tests run a real Chromium against fixture pages that mimic the Shopify
+admin — a host frame, an embedded app iframe, and a storefront — so iframe
+traversal, host-vs-app resolution and cross-surface variable passing are all
+verified without needing a dev store.
 
 `qa validate` parses the sheet and reports every problem with row, column and
 line number — without opening a browser:

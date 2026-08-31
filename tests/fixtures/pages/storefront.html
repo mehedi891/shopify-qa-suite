@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Test Product</title>
+<style>
+  body { font: 14px system-ui; padding: 20px; }
+  #banner { background: #e8f4ff; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
+</style>
+<!-- The theme app extension block reads what the admin app saved. -->
+<div id="block" data-block-handle="discount-banner"></div>
+<h1>Test Product</h1>
+<p>$49.00</p>
+<button>Add to cart</button>
+<script>
+  const s = JSON.parse(localStorage.getItem('settings') || '{}');
+  if (s.enabled && s.text) {
+    const el = document.createElement('div');
+    el.id = 'banner';
+    el.textContent = s.text;
+    document.getElementById('block').appendChild(el);
+  }
+</script>

@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Discount Banner — Settings</title>
+<style>
+  body { font: 14px system-ui; padding: 20px; }
+  .field { margin: 16px 0; }
+  label { display: block; margin-bottom: 4px; font-weight: 600; }
+  input[type=text] { padding: 8px; width: 320px; }
+  button { padding: 8px 16px; }
+  #error { color: #b00; display: none; }
+  #error.show { display: block; }
+</style>
+<h1>Dashboard</h1>
+<nav><a href="#settings">Settings</a></nav>
+
+<h2 id="settings">Settings</h2>
+<div class="field">
+  <input type="checkbox" role="switch" id="enable">
+  <label for="enable">Enable discount banner</label>
+</div>
+<div class="field">
+  <label for="banner">Banner text</label>
+  <input type="text" id="banner">
+</div>
+<div class="field">
+  <label for="placement">Placement</label>
+  <select id="placement">
+    <option>Above add to cart</option>
+    <option>Below add to cart</option>
+  </select>
+</div>
+<div id="error">Banner text is required</div>
+<button id="save">Save</button>
+
+<script>
+  const enable = document.getElementById('enable');
+  const banner = document.getElementById('banner');
+  const placement = document.getElementById('placement');
+  const error = document.getElementById('error');
+
+  // restore persisted settings so a reload reflects what was saved
+  const saved = JSON.parse(localStorage.getItem('settings') || '{}');
+  enable.checked = !!saved.enabled;
+  banner.value = saved.text || '';
+  if (saved.placement) placement.value = saved.placement;
+
+  document.getElementById('save').addEventListener('click', () => {
+    if (enable.checked && !banner.value.trim()) {
+      error.classList.add('show');
+      return;
+    }
+    error.classList.remove('show');
+    localStorage.setItem('settings', JSON.stringify({
+      enabled: enable.checked, text: banner.value, placement: placement.value,
+    }));
+    // the admin host renders the toast, not us — same as App Bridge
+    parent.postMessage({ type: 'toast', text: 'Settings saved' }, '*');
+  });
+</script>

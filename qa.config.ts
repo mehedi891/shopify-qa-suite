@@ -18,7 +18,9 @@ export default {
     workers: 1, // see ARCHITECTURE.md §11 — serial on purpose
   },
   planner: {
-    model: 'claude-sonnet-5',
+    // Only reached on a cache miss that the free heuristics could not resolve,
+    // so this is a low-volume call. Lower it if you want to trade accuracy for cost.
+    model: 'claude-opus-5',
     maxCallsPerRun: 100,
   },
   artifacts: {

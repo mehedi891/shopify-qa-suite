@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Admin — Test Store</title>
+<style>
+  body { font: 14px system-ui; margin: 0; }
+  header { background: #1a1a1a; color: #fff; padding: 12px 16px; }
+  #toast { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+           background: #303030; color: #fff; padding: 12px 20px; border-radius: 8px; }
+  #toast.show { display: block; }
+  iframe { width: 100%; height: 600px; border: 0; }
+  #save-bar { display: none; background: #f1f1f1; padding: 8px 16px; }
+  #save-bar.show { display: block; }
+</style>
+<header>Test Store · Admin</header>
+<!-- Save bar and toast live in the HOST frame, exactly like App Bridge's
+     ui-save-bar and shopify.toast.show() do in the real admin. -->
+<div id="save-bar"><button>Save changes</button><button>Discard</button></div>
+<iframe name="app-iframe" src="./app.html" title="App"></iframe>
+<div id="toast" role="status"></div>
+<script>
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'toast') return;
+    const el = document.getElementById('toast');
+    el.textContent = e.data.text;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 4000);
+  });
+</script>

@@ -54,9 +54,13 @@ function parseAssertion(body: string, frame: FrameHint): Assertion | null {
   let m = /^the\s+url\s+to\s+(contain|match|be)\s+(.+)$/i.exec(s);
   if (m) return { kind: 'url', expected: unquote(m[2]!), negated: false };
 
-  // expect toast "…"
+  // expect toast "…" — the toast text is also how we find it, and it usually
+  // lives in the host admin frame rather than the app frame
   m = /^(?:a\s+)?toast\s+(?:to\s+say\s+|saying\s+|with\s+)?(.+)$/i.exec(s);
-  if (m) return { kind: 'toast', expected: unquote(m[1]!), negated: false };
+  if (m) {
+    const text = unquote(m[1]!);
+    return { kind: 'toast', target: makeTarget(m[1]!, frame), expected: text, negated: false };
+  }
 
   // expect the clipboard to contain "…"
   m = /^the\s+clipboard\s+to\s+(?:contain|be)\s+(.+)$/i.exec(s);

@@ -232,29 +232,46 @@ storefront context.
 
 ## 7. Step execution flow
 
+Resolution is tiered, cheapest first. Each tier only runs if the one above it
+missed:
+
 ```
 step
  │
- ├─ explicit syntax?  ──yes──► parse action + selector ──────┐
- │        │no                                                │
- ├─ locator cache hit? ──yes──► use cached locator ──────────┤
- │        │no                                                │
- └─ Planner: a11y snapshot of current frame + step text      │
-            → candidate locator → verify it resolves         │
-            → write to cache ───────────────────────────────►│
-                                                             ▼
-                                                    execute action
-                                                    (Playwright auto-wait)
-                                                             │
-                                                    screenshot + record
-                                                             │
-                                                    locator failed at runtime?
-                                                     └─ re-plan once → 'healed'
+ ├─ 1. explicit selector?   ──yes──► use it verbatim         (free, not cached)
+ │         │no
+ ├─ 2. locator cache hit?   ──yes──► rebuild from spec       (free)
+ │         │no
+ ├─ 3. role / label / text heuristics                        (free)
+ │      getByRole('button', {name:'Save'}) and friends,
+ │      tried across each candidate frame until one matches
+ │      uniquely ──► cache the winning spec
+ │         │all missed
+ └─ 4. Planner: ARIA snapshot + step text → LocatorSpec      (one model call)
+            → verify it resolves → cache it
 ```
 
-Cost control: the planner is called only on cache miss or heal. A warm suite is a
-pure-Playwright run. A per-run call budget is enforced; exceeding it fails the run
-with a clear message rather than quietly burning tokens.
+**Tier 3 is what keeps this affordable.** `click "Save"` is just
+`getByRole('button', { name: 'Save' })` — no model needed, ever. In practice the
+large majority of steps never reach the planner even on a cold cache, and a warm
+cache is a pure-Playwright run.
+
+Two details that matter:
+
+- **Tiers 1–3 retry until the step timeout**, so asynchronously rendered UI
+  resolves itself. Nobody writes a sleep.
+- **A target containing a variable is never cached.** `expect "{bannerText}" to
+  be visible` resolves to a different string every run, so persisting that
+  locator would guarantee a miss next time. The step still resolves normally; it
+  just re-resolves each run.
+
+**Self-healing:** if a cached locator stops matching, it is dropped and the step
+re-resolves from tier 3. The step is reported as `healed` so someone can check
+whether the UI changed on purpose.
+
+**Cost control:** a per-run planner budget is enforced. Exceeding it fails the
+run with an explanation rather than quietly spending — a budget blowout almost
+always means a UI overhaul invalidated many cached locators at once.
 
 ## 8. Isolation and cleanup
 
@@ -286,7 +303,7 @@ export default {
   store: { domain: 'my-dev-store.myshopify.com', appHandle: 'our-app' },
   sheet: { spreadsheetId: process.env.QA_SHEET_ID!, tab: 'Test Cases' },
   run:   { headless: true, retries: 1, timeoutMs: 30_000, workers: 1 },
-  planner: { model: 'claude-sonnet-5', maxCallsPerRun: 100 },
+  planner: { model: 'claude-opus-5', maxCallsPerRun: 100 },
   artifacts: { screenshots: 'all', video: 'on-failure', trace: 'on-failure' },
 };
 ```
