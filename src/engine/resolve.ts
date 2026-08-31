@@ -173,10 +173,20 @@ export async function resolveTarget(
     `Could not find "${target.raw}" for step: ${step.raw}\n` +
     `  Searched: ${roots.map((r) => r.name).join(', ')}\n` +
     `  Tried: ${candidates.slice(0, 4).map(describeSpec).join(', ')}…` +
-    (planner.name === 'null'
-      ? `\n  No planner configured — set ANTHROPIC_API_KEY to let the tool resolve labels it cannot guess.`
-      : `\n  The planner could not identify it either.`),
+    plannerAdvice(planner.name),
   );
+}
+
+function plannerAdvice(plannerName: string): string {
+  if (plannerName === 'agent') {
+    return '\n  Run `qa snapshot` to see what is actually on the page, then either fix the\n' +
+           '  label in the sheet or use an explicit selector, e.g. qa do \'click [data-test=save]\'.';
+  }
+  if (plannerName === 'null') {
+    return '\n  No planner configured. Either drive this interactively (`qa start`, then\n' +
+           '  `qa snapshot`), or set ANTHROPIC_API_KEY for unattended runs.';
+  }
+  return '\n  The planner could not identify it either.';
 }
 
 /** Compact accessibility tree of a frame, used as planner input. */

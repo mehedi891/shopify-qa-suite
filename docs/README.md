@@ -13,10 +13,13 @@ the storefront.
    grammar. **This is the doc to hand QA.**
 4. **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** — six phases, build order,
    milestones.
-5. **[COVERAGE.md](COVERAGE.md)** — what the tool can reach: App Bridge modals,
+5. **[INTERACTIVE.md](INTERACTIVE.md)** — running it from a chat with no API
+   key or service account: you log in, an agent drives, results land in chat
+   and a CSV.
+6. **[COVERAGE.md](COVERAGE.md)** — what the tool can reach: App Bridge modals,
    dialogs, downloads, popups, forced error states, and the few categories that
    need extra infrastructure.
-6. **[SETUP.md](SETUP.md)** — dev store, service account, env, CI. Some items need
+7. **[SETUP.md](SETUP.md)** — dev store, service account, env, CI. Some items need
    admin rights; start them early.
 
 ## Decisions locked in

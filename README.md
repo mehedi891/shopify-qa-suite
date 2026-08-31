@@ -24,6 +24,20 @@ Teardown:         switch to admin
                   click "Save"
 ```
 
+## Two ways to run it
+
+**Interactive** — no API key, no service account, nothing in `.env`. You log in;
+an agent in a Claude Code chat drives the browser, reads your sheet, and reports
+back. See **[docs/INTERACTIVE.md](docs/INTERACTIVE.md)**.
+
+```bash
+npm install && npx playwright install chromium
+npx tsx src/cli/index.ts start     # a browser opens; you log in
+```
+
+**Unattended** — for CI. Needs a Google service account, an Anthropic API key
+and a saved Shopify session. Same engine, same step grammar, same locator cache.
+
 ## Status
 
 Early. Built in phases — see [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
@@ -73,6 +87,10 @@ line number — without opening a browser:
 
 | Command | Purpose |
 |---|---|
+| `qa start` / `qa detect` | Interactive session (see [INTERACTIVE.md](docs/INTERACTIVE.md)). |
+| `qa snapshot` | Accessibility tree per frame — how an agent sees the page. |
+| `qa do '<step>'` | Run one plain-English step. |
+| `qa results --csv out.csv` | Table in chat + CSV file. |
 | `qa apps` | List app profiles and session status. |
 | `qa validate` | Parse-check the sheet. Instant, no browser. |
 | `qa run` | Run every enabled case. |

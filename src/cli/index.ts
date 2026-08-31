@@ -7,6 +7,7 @@ import { SheetsSource } from '../source/SheetsSource.js';
 import type { TestCaseSource } from '../source/TestCaseSource.js';
 import { resolveProfile } from '../config/apps.js';
 import { reportValidation } from './validate.js';
+import * as session from './session.js';
 import { runCommand } from './run.js';
 
 const program = new Command();
@@ -107,6 +108,119 @@ program
     const { openLastReport } = await import('./report.js');
     process.exit(await openLastReport());
   });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Interactive mode: a browser session a human logs into, driven step by step
+// by an agent. No API key, no service account, no stored credentials.
+// ─────────────────────────────────────────────────────────────────────────────
+
+program
+  .command('start')
+  .description('Open a browser session for you to log into')
+  .action(async () => process.exit(await session.startSession()));
+
+program
+  .command('serve', { hidden: true })
+  .description('Run the session server in the foreground (used by `qa start`)')
+  .action(async () => { await session.serveSession(); });
+
+program
+  .command('detect')
+  .description('Read the store, app handle and app iframe host from the open browser')
+  .action(async () => process.exit(await session.detect()));
+
+program
+  .command('status')
+  .description('Show the current session: store, app, surface, URL')
+  .action(async () => process.exit(await session.status()));
+
+program
+  .command('frames')
+  .description('List the frames on the current page (debugging the app iframe)')
+  .action(async () => process.exit(await session.frames()));
+
+program
+  .command('snapshot')
+  .description('Print the accessibility tree of the current page, per frame')
+  .option('--frame <which>', 'app | host | page (default: every relevant frame)')
+  .option('--max <chars>', 'truncate the tree', (v) => Number(v))
+  .action(async (opts: { frame?: string; max?: number }) =>
+    process.exit(await session.snapshot(opts.frame, opts.max)));
+
+program
+  .command('do <step>')
+  .description('Run one plain-English step, e.g. qa do \'click "Save"\'')
+  .option('--case <id>', 'test case id, for the locator cache')
+  .action(async (step: string, opts: { case?: string }) =>
+    process.exit(await session.doStep(step, opts)));
+
+program
+  .command('admin [target]')
+  .description('Switch to the admin, optionally navigating somewhere')
+  .action(async (target?: string) => process.exit(await session.goSurface('admin', target)));
+
+program
+  .command('storefront [target]')
+  .description('Switch to the storefront, optionally navigating somewhere')
+  .action(async (target?: string) => process.exit(await session.goSurface('storefront', target)));
+
+program
+  .command('shot <path>')
+  .description('Screenshot the current surface')
+  .action(async (path: string) => process.exit(await session.shot(path)));
+
+program
+  .command('vars-reset')
+  .description('Clear saved variables between test cases')
+  .action(async () => process.exit(await session.resetVars()));
+
+program
+  .command('record <id> <status>')
+  .description('Record a verdict for one test case: PASS | FAIL | BLOCKED | SKIPPED')
+  .option('--title <title>', 'case title')
+  .option('--suite <suite>', 'suite')
+  .option('--tags <tags>', 'comma-separated tags')
+  .option('--step <step>', 'the step that failed')
+  .option('--reason <reason>', 'why it failed')
+  .option('--seconds <n>', 'duration', (v) => Number(v))
+  .option('--screenshot <path>', 'screenshot path')
+  .option('--notes <notes>', 'anything worth knowing')
+  .action(async (id: string, statusArg: string, opts) => {
+    const status = statusArg.toUpperCase();
+    if (!['PASS', 'FAIL', 'BLOCKED', 'SKIPPED'].includes(status)) {
+      console.error(pc.red(`status must be PASS, FAIL, BLOCKED or SKIPPED — got "${statusArg}"`));
+      process.exit(1);
+    }
+    process.exit(await session.record({
+      id,
+      title: opts.title ?? '',
+      suite: opts.suite,
+      tags: opts.tags,
+      status: status as 'PASS' | 'FAIL' | 'BLOCKED' | 'SKIPPED',
+      failedStep: opts.step,
+      reason: opts.reason,
+      durationSeconds: opts.seconds,
+      screenshot: opts.screenshot,
+      notes: opts.notes,
+    }));
+  });
+
+program
+  .command('results')
+  .description('Print the run as a table and write a CSV')
+  .option('--csv <path>', 'where to write the CSV')
+  .action(async (opts: { csv?: string }) => process.exit(await session.results(opts.csv)));
+
+program
+  .command('results-clear')
+  .description('Start a fresh set of results')
+  .action(async () => process.exit(await session.clearResults()));
+
+program
+  .command('stop')
+  .description('Close the browser session')
+  .action(async () => process.exit(await session.stopSession()));
 
 async function main() {
   try {

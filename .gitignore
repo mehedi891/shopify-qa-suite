@@ -8,6 +8,8 @@ qa.apps.json
 *.service-account.json
 
 # run state
+.qa-session.json
+qa-results-*.csv
 .cache/
 artifacts/
 test-results/

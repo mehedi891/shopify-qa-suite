@@ -33,6 +33,19 @@ export class NullPlanner implements Planner {
   }
 }
 
+/**
+ * Interactive mode: the agent driving the session is the planner. It reads a
+ * snapshot itself and supplies an explicit selector, so there is nothing to
+ * call — but the failure advice differs from the offline case.
+ */
+export class AgentPlanner implements Planner {
+  readonly name = 'agent';
+  readonly calls = 0;
+  async plan(): Promise<LocatorSpec | null> {
+    return null;
+  }
+}
+
 export class PlannerBudgetError extends Error {}
 
 const SpecSchema = z.object({
