@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
-# Short way to run the tool: ./qa start, ./qa detect, ./qa suite --csv ...
+# Two paths on purpose:
+#   fast  — plain Node, no TypeScript boot, for commands that just drive the
+#           already-running browser session (~0.1s instead of ~2.7s)
+#   full  — tsx, for commands that need the parser, sources or reporters
 set -e
 cd "$(dirname "$0")"
-exec npx tsx src/cli/index.ts "$@"
+
+case "$1" in
+  status|detect|doctor|frames|snapshot|do|play|admin|storefront|shot|viewport|vars-reset|stop)
+    # --record needs the results file, which the TypeScript path owns
+    if [[ "$*" == *"--record"* ]]; then
+      exec npx tsx src/cli/index.ts "$@"
+    fi
+    exec node bin/fast.mjs "$@"
+    ;;
+  *)
+    exec npx tsx src/cli/index.ts "$@"
+    ;;
+esac

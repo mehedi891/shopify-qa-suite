@@ -109,6 +109,32 @@ qa start --chromium
 | `qa results [--csv path]` | Table in chat + CSV file |
 | `qa stop` | Close the browser |
 
+## Why it is fast (and what was slow)
+
+Driving the browser from a chat has two costs: the browser work, and the cost of
+*asking* for it. The second one dominated.
+
+| | Time |
+|---|---|
+| Node boot | 0.035s |
+| **TypeScript (tsx) boot** | **1.64s** |
+| One command, before | **2.75s** |
+| One command, now | **0.47s** |
+
+Every command was paying ~2.7s to start a TypeScript process before touching the
+browser at all. Session commands now go through `bin/fast.mjs` — plain
+JavaScript, no TypeScript, no dependencies — which reads `.qa-session.json`,
+POSTs to the already-running browser, prints, and exits.
+
+Commands that need the parser, the sheet sources or the reporters
+(`validate`, `suite`, `results`, `start`) still take the TypeScript path, where
+1.6s of startup does not matter. `./qa` routes automatically; nothing to think
+about.
+
+The other half is batching: `qa play` runs a whole case in **one** call rather
+than one per step. Both together are the difference between a case taking half a
+minute and a few seconds.
+
 ## Run a whole case in one command
 
 `qa do` runs one step. Driving a ten-step case that way costs ten process spawns
