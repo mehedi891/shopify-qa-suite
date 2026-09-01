@@ -178,7 +178,7 @@ export class QaSession {
       case 'doctor': return this.doctor();
       case 'frames': return { ok: true, data: this.page.frames().map((f) => ({ url: f.url(), name: f.name() })) };
       case 'snapshot': return this.snapshot(cmd.frame ?? 'auto', cmd.maxChars ?? 18_000);
-      case 'do': return this.doStep(cmd.step, cmd.testCaseId, cmd.index);
+      case 'do': return this.doStep(cmd.step, cmd.testCaseId, cmd.index, cmd.timeoutMs);
       case 'play': return this.play(cmd);
       case 'goto': return this.goto(cmd.surface, cmd.target);
       case 'switch': return this.switchTo(cmd.surface);
@@ -248,7 +248,7 @@ export class QaSession {
   }
 
   /** Execute one plain-English step against the live browser. */
-  private async doStep(raw: string, testCaseId = 'SESSION', index?: number): Promise<CommandResult> {
+  private async doStep(raw: string, testCaseId = 'SESSION', index?: number, timeoutMs = 15_000): Promise<CommandResult> {
     const idx = index ?? this.stepIndex++;
     const { step, error } = parseStepLine(raw, idx, this.current, 'steps');
     if (error) return { ok: false, message: error };
@@ -277,7 +277,7 @@ export class QaSession {
       // it reads a snapshot and supplies an explicit selector itself
       planner: new AgentPlanner(),
       context: this.testContext,
-      timeoutMs: 15_000,
+      timeoutMs,
     });
 
     const result = await engine.execute(step as Step, testCaseId);
@@ -301,7 +301,8 @@ export class QaSession {
    * caller needs is already on disk.
    */
   private async play(cmd: {
-    steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean;
+    steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string;
+    shotEvery?: boolean; timeoutMs?: number;
   }): Promise<CommandResult> {
     const caseId = cmd.testCaseId ?? 'SESSION';
     const stopOnFailure = cmd.stopOnFailure !== false;
@@ -315,7 +316,7 @@ export class QaSession {
         continue;
       }
       const started = Date.now();
-      const res = await this.doStep(raw, caseId, i);
+      const res = await this.doStep(raw, caseId, i, cmd.timeoutMs);
       const durationMs = Date.now() - started;
       const data = res.data as { locator?: string } | undefined;
 
@@ -325,14 +326,34 @@ export class QaSession {
 
       if (!res.ok) {
         failed = true;
-        // capture the moment of failure now: asking for it later means the
-        // page has already moved on
-        const path = `${shotDir}/${safeName(caseId)}-step-${String(i).padStart(2, '0')}-failed.png`;
+        // Capture everything needed to diagnose, right now. Asking for it
+        // afterwards costs another round trip AND reads a page that has already
+        // moved on — the toast is gone, the modal has closed, the spinner
+        // finished. This is the automatic escalation: the next question is
+        // already answered before it is asked.
+        const stem = `${shotDir}/${safeName(caseId)}-step-${String(i).padStart(2, '0')}-failed`;
         try {
           mkdirSync(shotDir, { recursive: true });
-          await this.page.screenshot({ path });
-          entry.screenshot = path;
+          await this.page.screenshot({ path: `${stem}.png` });
+          entry.screenshot = `${stem}.png`;
         } catch { /* a closed page is not worth failing the run over */ }
+        try {
+          const roots = await this.frames().roots('auto');
+          const parts: string[] = [];
+          // short per-frame budget: an empty or detached frame must not add
+          // seconds to every failure just to report that it is empty
+          for (const { name, root } of roots) {
+            const tree = await ariaSnapshot(root, 6_000, 1_500);
+            if (tree && tree !== '(accessibility snapshot unavailable)') {
+              parts.push(`## frame: ${name}\n${tree}`);
+            }
+          }
+          const full = `# ${this.page.url()}\n\n${parts.join('\n\n')}`;
+          writeFileSync(`${stem}.txt`, full);
+          entry.snapshotPath = `${stem}.txt`;
+          // a trimmed copy inline, so the common case needs no second call
+          entry.snapshot = full.split('\n').slice(0, 60).join('\n');
+        } catch { /* diagnosis is best effort */ }
       } else if (cmd.shotEvery) {
         const path = `${shotDir}/${safeName(caseId)}-step-${String(i).padStart(2, '0')}.png`;
         try {

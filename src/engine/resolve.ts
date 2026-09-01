@@ -194,10 +194,10 @@ function plannerAdvice(plannerName: string): string {
 }
 
 /** Compact accessibility tree of a frame, used as planner input. */
-export async function ariaSnapshot(root: LocatorRoot, maxChars = 20_000): Promise<string> {
+export async function ariaSnapshot(root: LocatorRoot, maxChars = 20_000, timeoutMs = 5_000): Promise<string> {
   try {
     const body = root.locator('body');
-    const snapshot = await body.ariaSnapshot({ timeout: 5_000 });
+    const snapshot = await body.ariaSnapshot({ timeout: timeoutMs });
     return snapshot.length > maxChars ? `${snapshot.slice(0, maxChars)}\n… (truncated)` : snapshot;
   } catch {
     return '(accessibility snapshot unavailable)';

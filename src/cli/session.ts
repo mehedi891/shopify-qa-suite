@@ -159,6 +159,11 @@ export async function play(opts: {
       console.log(`${pc.red('✗')} ${s.step}`);
       for (const line of (s.detail ?? '').split('\n').slice(0, 6)) console.log(pc.dim(`    ${line}`));
       if (s.screenshot) console.log(pc.yellow(`    screenshot: ${s.screenshot}`));
+      if (s.snapshot) {
+        console.log(pc.dim('    ── page at the moment of failure ──'));
+        for (const line of s.snapshot.split('\n')) console.log(pc.dim(`    ${line}`));
+        if (s.snapshotPath) console.log(pc.dim(`    (full tree: ${s.snapshotPath})`));
+      }
     }
   }
   console.log(pc.dim(`\n${data.surface} · ${data.url}`));

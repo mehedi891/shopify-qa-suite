@@ -63,6 +63,11 @@ function printSteps(steps) {
       console.log(`${RED}✗${OFF} ${s.step}`);
       for (const line of (s.detail ?? '').split('\n').slice(0, 6)) console.log(`${DIM}    ${line}${OFF}`);
       if (s.screenshot) console.log(`${YEL}    screenshot: ${s.screenshot}${OFF}`);
+      if (s.snapshot) {
+        console.log(`${DIM}    ── page at the moment of failure ──${OFF}`);
+        for (const line of s.snapshot.split('\n')) console.log(`${DIM}    ${line}${OFF}`);
+        if (s.snapshotPath) console.log(`${DIM}    (full tree: ${s.snapshotPath})${OFF}`);
+      }
     }
   }
 }
@@ -122,13 +127,16 @@ async function main() {
     }
 
     case 'do': {
-      const { flags, positional } = takeFlags(rest, ['case']);
-      const r = await send({ type: 'do', step: positional[0], testCaseId: flags.case });
+      const { flags, positional } = takeFlags(rest, ['case', 'timeout']);
+      const r = await send({
+        type: 'do', step: positional[0], testCaseId: flags.case,
+        timeoutMs: flags.timeout ? Number(flags.timeout) : undefined,
+      });
       return ok(r);
     }
 
     case 'play': {
-      const { flags, positional } = takeFlags(rest, ['case', 'title', 'suite', 'tags', 'file']);
+      const { flags, positional } = takeFlags(rest, ['case', 'title', 'suite', 'tags', 'file', 'timeout']);
       const steps = flags.file
         ? readFileSync(flags.file, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
         : positional;
@@ -136,6 +144,7 @@ async function main() {
       const r = await send({
         type: 'play', steps, testCaseId: flags.case,
         stopOnFailure: !flags['keep-going'], shotEvery: Boolean(flags.shots),
+        timeoutMs: flags.timeout ? Number(flags.timeout) : undefined,
       });
       printSteps(r.data.steps);
       console.log(`${DIM}\n${r.data.surface} · ${r.data.url}${OFF}`);

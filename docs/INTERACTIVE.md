@@ -135,6 +135,30 @@ The other half is batching: `qa play` runs a whole case in **one** call rather
 than one per step. Both together are the difference between a case taking half a
 minute and a few seconds.
 
+## When a step fails, everything needed is already captured
+
+A failure automatically records three things at the moment it happens:
+
+- a **screenshot** of the page
+- the **accessibility tree** of every frame searched, saved beside it
+- the first 60 lines of that tree **inline in the output**
+
+So the next question — "what was actually on the page?" — is answered before it
+is asked, with no second command. This matters more than it sounds: asking
+afterwards reads a page that has already moved on. The toast has gone, the modal
+has closed, the spinner has finished.
+
+Failures are slower than passes by design, because a failing locator waits for
+the element to appear before giving up. When you expect a step might fail — while
+exploring an unfamiliar page — say so:
+
+```bash
+qa play --timeout 2000 'click "Maybe This Exists"'
+```
+
+That cuts a failing step from ~26s to ~9s. A passing step is unaffected
+(~0.1s): the timeout is a ceiling, not a delay.
+
 ## Run a whole case in one command
 
 `qa do` runs one step. Driving a ten-step case that way costs ten process spawns

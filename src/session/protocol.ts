@@ -24,8 +24,8 @@ export type Command =
   | { type: 'doctor' }
   | { type: 'snapshot'; frame?: 'app' | 'host' | 'page' | 'auto'; maxChars?: number }
   | { type: 'frames' }
-  | { type: 'do'; step: string; testCaseId?: string; index?: number }
-  | { type: 'play'; steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean }
+  | { type: 'do'; step: string; testCaseId?: string; index?: number; timeoutMs?: number }
+  | { type: 'play'; steps: string[]; testCaseId?: string; stopOnFailure?: boolean; shotDir?: string; shotEvery?: boolean; timeoutMs?: number }
   | { type: 'goto'; surface: 'admin' | 'storefront'; target?: string }
   | { type: 'switch'; surface: 'admin' | 'storefront' }
   | { type: 'viewport'; width: number; height: number }
@@ -48,6 +48,9 @@ export interface PlayedStep {
   locator?: string;
   durationMs: number;
   screenshot?: string;
+  /** Accessibility tree captured at the moment of failure. */
+  snapshot?: string;
+  snapshotPath?: string;
 }
 
 export const SESSION_FILE = '.qa-session.json';
