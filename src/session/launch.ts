@@ -91,10 +91,7 @@ async function attach(endpoint: string): Promise<LaunchedBrowser> {
   } catch {
     throw new Error(
       `Could not attach to Chrome at ${endpoint}.\n\n` +
-      `Start Chrome with remote debugging first:\n\n` +
-      `  ${chromeCommand()} \\\n` +
-      `    --remote-debugging-port=9222 \\\n` +
-      `    --user-data-dir="$HOME/.qa-chrome-profile"\n\n` +
+      `Start Chrome with remote debugging first:\n\n${attachCommand()}\n\n` +
       `Note the --user-data-dir: since Chrome 136, remote debugging is refused on\n` +
       `the default profile directory. Use a dedicated one and log in there once —\n` +
       `it persists, so this is a one-time step.`,
@@ -116,9 +113,20 @@ async function attach(endpoint: string): Promise<LaunchedBrowser> {
   };
 }
 
-function chromeCommand(): string {
+/** The exact command to paste, in the shell the user is actually running. */
+function attachCommand(): string {
+  if (process.platform === 'win32') {
+    return [
+      '  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ^',
+      '    --remote-debugging-port=9222 ^',
+      '    --user-data-dir="%USERPROFILE%\\.qa-chrome-profile"',
+    ].join('\n');
+  }
   const mac = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  if (existsSync(mac)) return `"${mac}"`;
-  if (process.platform === 'win32') return '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"';
-  return 'google-chrome';
+  const binary = existsSync(mac) ? `"${mac}"` : 'google-chrome';
+  return [
+    `  ${binary} \\`,
+    '    --remote-debugging-port=9222 \\',
+    '    --user-data-dir="$HOME/.qa-chrome-profile"',
+  ].join('\n');
 }

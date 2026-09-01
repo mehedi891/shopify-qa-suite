@@ -1,0 +1,16 @@
+# Keep line endings sane across platforms.
+* text=auto
+
+# The bash launcher MUST stay LF: CRLF makes it fail with a confusing
+# "bad interpreter: /usr/bin/env bash^M" under WSL and Git Bash.
+qa text eol=lf
+*.sh text eol=lf
+*.mjs text eol=lf
+
+# The Windows launcher wants CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.zip binary

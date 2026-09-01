@@ -15,8 +15,14 @@ export async function openLastReport(): Promise<number> {
     console.log(pc.yellow(`Report missing: ${state.reportPath ?? '(none recorded)'}`));
     return 1;
   }
-  const opener = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-  spawn(opener, [state.reportPath], { detached: true, stdio: 'ignore' }).unref();
+  // `start` is a cmd.exe builtin rather than an executable, so spawning it
+  // directly fails with ENOENT on Windows. The empty "" is the window title
+  // argument, which start requires before a quoted path.
+  const [command, args] =
+    process.platform === 'darwin' ? ['open', [state.reportPath]]
+    : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', state.reportPath]]
+    : ['xdg-open', [state.reportPath]];
+  spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   console.log(state.reportPath);
   return 0;
 }

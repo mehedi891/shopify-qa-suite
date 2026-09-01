@@ -36,7 +36,7 @@ No CSS selectors. No code. Just words.
 You need three things:
 
 1. **Node.js 20 or newer.** Check with `node -v`. If you don't have it, get it
-   from [nodejs.org](https://nodejs.org).
+   from [nodejs.org](https://nodejs.org). Works on macOS, Windows and Linux.
 2. **Google Chrome** installed on your computer.
 3. **A Shopify dev store** with your app installed on it.
 
@@ -65,11 +65,22 @@ This takes a minute or two the first time.
 
 ### Step 3 — Open the browser
 
+**macOS / Linux:**
+
 ```bash
 ./qa start
 ```
 
+**Windows** (Command Prompt or PowerShell):
+
+```
+qa start
+```
+
 A Chrome window will open.
+
+> On Windows, use `qa` everywhere this guide writes `./qa`. Everything else is
+> the same. If neither works, `npm run qa -- start` works on all platforms.
 
 ### Step 4 — Log in
 
@@ -276,12 +287,22 @@ Run only some tests:
 
 **Shopify won't let me log in.**
 The tool uses your real Chrome, which usually works. If it still blocks you,
-start Chrome yourself and let the tool join it:
+start Chrome yourself and let the tool join it.
+
+macOS:
 
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --remote-debugging-port=9222 \
   --user-data-dir="$HOME/.qa-chrome-profile"
+```
+
+Windows:
+
+```
+"C:\Program Files\Google\Chrome\Application\chrome.exe" ^
+  --remote-debugging-port=9222 ^
+  --user-data-dir="%USERPROFILE%\.qa-chrome-profile"
 ```
 
 Log in there, then run:
@@ -313,6 +334,23 @@ your test file.
 
 **"Store unknown"**
 Open your app in the browser window, then run `./qa detect` again.
+
+**Windows: `./qa` is not recognised.**
+Drop the `./` — on Windows the command is just `qa`. If that still fails, use
+`npm run qa -- start` (and `npm run qa -- detect`, and so on). That form works
+everywhere.
+
+**Windows: `'qa' is not recognized as an internal or external command`.**
+You are not in the project folder. `cd` into the folder you cloned, then try
+again.
+
+**Git Bash or WSL: `bad interpreter: /usr/bin/env bash^M`.**
+Git converted the launcher to Windows line endings. Fix it with:
+
+```bash
+git config core.autocrlf input
+git rm --cached -r . && git reset --hard
+```
 
 ---
 
