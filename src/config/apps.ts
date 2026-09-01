@@ -60,7 +60,7 @@ export function loadProfiles(): { profiles: Record<string, AppProfile>; defaultN
   if (!env.SHOPIFY_STORE_DOMAIN || !env.SHOPIFY_APP_HANDLE) {
     throw new ConfigError(
       'No app configured. Either set SHOPIFY_STORE_DOMAIN, SHOPIFY_APP_HANDLE and SHOPIFY_APP_HOST ' +
-      `in .env, or create ${PROFILES_PATH} to test several apps. See docs/SETUP.md.`,
+      `in .env, or create ${PROFILES_PATH} to test several apps. See the README.`,
     );
   }
   const profile: AppProfile = {

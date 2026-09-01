@@ -30,7 +30,7 @@ export class ConfigError extends Error {}
 export function require_(key: keyof Env, why: string): string {
   const value = env[key];
   if (!value) {
-    throw new ConfigError(`Missing ${key} in .env — needed to ${why}. See docs/SETUP.md.`);
+    throw new ConfigError(`Missing ${key} in .env — needed to ${why}. See the README.`);
   }
   return value;
 }
@@ -40,6 +40,6 @@ export function sheetsCredentials(): string | undefined {
   if (env.GOOGLE_APPLICATION_CREDENTIALS) return undefined; // googleapis reads the file itself
   throw new ConfigError(
     'No Google credentials. Set GOOGLE_SERVICE_ACCOUNT_JSON (the whole JSON key on one line) ' +
-    'or GOOGLE_APPLICATION_CREDENTIALS (a path to it). See docs/SETUP.md §3.',
+    'or GOOGLE_APPLICATION_CREDENTIALS (a path to it). See the README.',
   );
 }

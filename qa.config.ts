@@ -27,6 +27,6 @@ export default {
     screenshots: 'all' as const,
     video: 'on-failure' as const,
     trace: 'on-failure' as const,
-    dir: 'artifacts',
+    dir: 'Test Result',
   },
 } as const;

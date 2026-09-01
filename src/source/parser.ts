@@ -4,7 +4,7 @@ import type {
 
 /**
  * Step grammar. Steps are plain English, one per line, as documented in
- * docs/TEST_CASE_SPEC.md. This module is pure: text in, structured steps out,
+ * the README ("Words you can use in your tests"). This module is pure: text in, structured steps out,
  * no browser and no network — which is what makes `qa validate` instant.
  */
 

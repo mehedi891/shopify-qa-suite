@@ -435,18 +435,23 @@ into the store, not into each app.
 
 ---
 
-## More reading
+## Where your results are saved
 
-| Doc | What is in it |
-|---|---|
-| [INTERACTIVE.md](docs/INTERACTIVE.md) | How to run tests with an AI helper in a chat |
-| [TEST_CASE_SPEC.md](docs/TEST_CASE_SPEC.md) | Every word you can use in a test — **give this to your QA team** |
-| [COVERAGE.md](docs/COVERAGE.md) | What can and cannot be tested |
-| [SETUP.md](docs/SETUP.md) | Setup for running tests on a server with no person watching |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the tool works inside |
-| [PRD.md](docs/PRD.md) | Why this was built |
+Everything a run produces goes in the **`Test Result`** folder:
 
----
+```
+Test Result/
+├── screenshots/              ← pictures taken while tests run
+└── 2026-09-01T13-04-57/      ← one folder per report
+    ├── report.html           ← open this in your browser
+    ├── results.csv           ← open this in Excel or Google Sheets
+    └── screenshots/          ← copies of the pictures for this report
+```
+
+You can zip a report folder and send it to your team. The pictures still work.
+
+This folder is not saved to GitHub, because results belong to a run, not to the
+code.
 
 ## A note on safety
 

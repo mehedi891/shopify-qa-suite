@@ -71,7 +71,7 @@ export async function launchBrowser(opts: LaunchOptions): Promise<LaunchedBrowse
       console.error(
         `Could not launch Google Chrome (${err instanceof Error ? err.message : String(err)}).\n` +
         `Falling back to bundled Chromium. Shopify/Google login may refuse it — ` +
-        `see docs/INTERACTIVE.md "If login is blocked".`,
+        `see the README, "Shopify won't let me log in".`,
       );
       return launchBrowser({ ...opts, mode: 'chromium' });
     }

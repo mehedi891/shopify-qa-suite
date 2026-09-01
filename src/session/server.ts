@@ -15,6 +15,7 @@ import { parseStepLine } from '../source/parser.js';
 import { SESSION_FILE, type Command, type CommandResult, type PlayedStep, type SessionInfo } from './protocol.js';
 import { slug } from '../surfaces/StorefrontSurface.js';
 import { diagnoseAppFrame } from '../surfaces/diagnose.js';
+import { WORKING_SHOTS } from '../report/paths.js';
 
 const SHOPIFY_HOSTS = /(^|\.)(shopify\.com|myshopify\.com|shopifycdn\.com|shopifycloud\.com)$/;
 
@@ -306,7 +307,7 @@ export class QaSession {
   }): Promise<CommandResult> {
     const caseId = cmd.testCaseId ?? 'SESSION';
     const stopOnFailure = cmd.stopOnFailure !== false;
-    const shotDir = cmd.shotDir ?? '.cache/shots';
+    const shotDir = cmd.shotDir ?? WORKING_SHOTS;
     const played: PlayedStep[] = [];
     let failed = false;
 

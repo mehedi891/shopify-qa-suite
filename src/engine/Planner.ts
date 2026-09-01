@@ -158,7 +158,7 @@ export class ClaudePlanner implements Planner {
       return spec;
     } catch (err) {
       if (err instanceof Anthropic.AuthenticationError) {
-        throw new Error('ANTHROPIC_API_KEY is invalid or expired. See docs/SETUP.md §4.');
+        throw new Error('ANTHROPIC_API_KEY is invalid or expired. See the README.');
       }
       if (err instanceof Anthropic.RateLimitError) {
         throw new Error('Anthropic rate limit hit while planning a locator. Retry the run shortly.');

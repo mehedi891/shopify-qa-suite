@@ -35,7 +35,7 @@ function resolveSource(csv?: string, app?: string): TestCaseSource {
   if (!sheetId) {
     throw new ConfigError(
       'No test-case source. Set QA_SHEET_ID in .env (or sheetId in qa.apps.json), ' +
-      'or pass --csv <file> to read a local CSV. See docs/SETUP.md.',
+      'or pass --csv <file> to read a local CSV. See the README.',
     );
   }
   return new SheetsSource({ spreadsheetId: sheetId, tab: sheetTab, serviceAccountJson: sheetsCredentials() });
@@ -268,7 +268,7 @@ program
   .command('results')
   .description('Print the run as a table and write a CSV + HTML report folder')
   .option('--csv <path>', 'where to write the CSV (default: inside the report folder)')
-  .option('--dir <path>', 'report folder (default: reports/<timestamp>)')
+  .option('--dir <path>', 'report folder (default: "Test Result/<timestamp>")')
   .action(async (opts: { csv?: string; dir?: string }) =>
     process.exit(await session.results(opts.csv, opts.dir)));
 

@@ -7,11 +7,15 @@ dist/
 qa.apps.json
 *.service-account.json
 
+# planning docs — kept locally, not shipped in the repo
+docs/
+
 # run state
 .qa-session.json
 qa-results-*.csv
 .cache/
+Test Result/
 artifacts/
+reports/
 test-results/
 .qa-profile/
-reports/

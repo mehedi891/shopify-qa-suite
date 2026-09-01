@@ -6,6 +6,7 @@ import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
 import { toMarkdownTable, type ResultRecord } from '../report/csv.js';
 import { writeSessionReport } from '../report/SessionReport.js';
+import { reportDir } from '../report/paths.js';
 import type { PlayedStep } from '../session/protocol.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
@@ -66,7 +67,7 @@ export async function startSession(opts: { chromium?: boolean; attach?: boolean 
   }
   console.error(pc.red('The browser session did not start in time.'));
   if (mode.mode === 'attach') {
-    console.error(pc.dim(`Is Chrome running with --remote-debugging-port? See docs/INTERACTIVE.md.`));
+    console.error(pc.dim(`Is Chrome running with --remote-debugging-port? See the README.`));
   }
   return 1;
 }
@@ -282,7 +283,7 @@ export async function results(csvPath?: string, dir?: string): Promise<number> {
 
   // a durable folder, not a scratch directory that later gets cleaned up
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const outDir = dir ?? `reports/${stamp}`;
+  const outDir = dir ?? reportDir(stamp);
   let store: string | undefined;
   let app: string | undefined;
   try {
