@@ -47,6 +47,14 @@ service account. You do **not** need to put anything in a `.env` file.
 
 ## Setup — 4 steps
 
+> ### 🪟 On Windows, write `qa` instead of `./qa`
+>
+> Everything else in this guide is exactly the same. So where you see
+> `./qa start`, you type `qa start`.
+>
+> If that does not work, this longer form works on **every** computer:
+> `npm run qa -- start`
+
 ### Step 1 — Get the code
 
 ```bash
@@ -65,22 +73,11 @@ This takes a minute or two the first time.
 
 ### Step 3 — Open the browser
 
-**macOS / Linux:**
-
 ```bash
 ./qa start
 ```
 
-**Windows** (Command Prompt or PowerShell):
-
-```
-qa start
-```
-
-A Chrome window will open.
-
-> On Windows, use `qa` everywhere this guide writes `./qa`. Everything else is
-> the same. If neither works, `npm run qa -- start` works on all platforms.
+A Chrome window will open. (Windows: `qa start`)
 
 ### Step 4 — Log in
 
@@ -258,6 +255,8 @@ fill #banner-text with "Hello"
 
 ## All the commands
 
+On Windows, drop the `./` from every command below.
+
 | Command | What it does |
 |---|---|
 | `./qa start` | Open the browser |
@@ -282,6 +281,55 @@ Run only some tests:
 ```
 
 ---
+
+## Using this on Windows
+
+It works the same way. Three small differences:
+
+**1. Leave off the `./`**
+
+| This guide says | You type |
+|---|---|
+| `./qa start` | `qa start` |
+| `./qa detect` | `qa detect` |
+| `./qa suite --csv cases/my-tests.csv` | `qa suite --csv cases/my-tests.csv` |
+
+Command Prompt and PowerShell both work. You must be inside the project folder.
+
+**2. If `qa` does not work, use this instead**
+
+```
+npm run qa -- start
+npm run qa -- detect
+npm run qa -- suite --csv cases/my-tests.csv
+```
+
+Note the `--` in the middle. It is needed, and this form works on every computer.
+
+**3. File paths: use `/`, not `\`**
+
+```
+qa suite --csv cases/my-tests.csv
+```
+
+Forward slashes work on Windows too. Backslashes only work on Windows, so
+sticking to `/` means the same command works for everyone on your team.
+
+### Windows setup, start to finish
+
+```
+git clone https://github.com/mehedi891/shopify-qa-suite.git
+cd shopify-qa-suite
+npm install
+npx playwright install chromium
+qa start
+```
+
+Then log into Shopify in the Chrome window that opens, open your app, and run:
+
+```
+qa detect
+```
 
 ## If something goes wrong
 
