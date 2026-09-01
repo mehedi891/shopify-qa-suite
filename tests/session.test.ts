@@ -17,6 +17,51 @@ describe('CSV output', () => {
   });
 });
 
+describe('CSV formatting', () => {
+  it('collapses a multi-line reason onto one line', async () => {
+    const { oneLine } = await import('../src/report/csv.js');
+    const messy = 'locator.click: Timeout exceeded.\nCall log:\n  - waiting for element\n    - resolved to <button>';
+    const out = oneLine(messy);
+    // a tall cell hides every other row in a spreadsheet
+    expect(out).not.toContain('\n');
+    expect(out).toContain('Timeout exceeded. · Call log:');
+  });
+
+  it('truncates very long reasons with an ellipsis', async () => {
+    const { oneLine } = await import('../src/report/csv.js');
+    const out = oneLine('x'.repeat(500), 50);
+    expect(out).toHaveLength(50);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('writes a readable timestamp, not an ISO string', async () => {
+    const { readableTimestamp } = await import('../src/report/csv.js');
+    expect(readableTimestamp(new Date(2026, 8, 1, 13, 4))).toBe('2026-09-01 13:04');
+  });
+
+  it('puts what needs attention first: FAIL, BLOCKED, SKIPPED, then PASS', async () => {
+    const { sortForReport } = await import('../src/report/csv.js');
+    const recs: ResultRecord[] = [
+      { id: 'TC-002', title: 'b', status: 'PASS' },
+      { id: 'TC-010', title: 'c', status: 'FAIL' },
+      { id: 'TC-001', title: 'a', status: 'PASS' },
+      { id: 'TC-003', title: 'd', status: 'BLOCKED' },
+      { id: 'TC-002b', title: 'e', status: 'FAIL' },
+    ];
+    expect(sortForReport(recs).map((r) => r.id))
+      .toEqual(['TC-002b', 'TC-010', 'TC-003', 'TC-001', 'TC-002']);
+  });
+
+  it('sorts IDs numerically, so TC-10 follows TC-9', async () => {
+    const { sortForReport } = await import('../src/report/csv.js');
+    const recs: ResultRecord[] = [
+      { id: 'TC-10', title: '', status: 'PASS' },
+      { id: 'TC-9', title: '', status: 'PASS' },
+    ];
+    expect(sortForReport(recs).map((r) => r.id)).toEqual(['TC-9', 'TC-10']);
+  });
+});
+
 describe('chat table', () => {
   const records: ResultRecord[] = [
     { id: 'TC-001', title: 'App loads', status: 'PASS' },

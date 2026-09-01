@@ -276,10 +276,29 @@ Working state during a run lives in `.cache/` (`session-results.json`,
 | TC-021 | Banner set in admin appears on storefront | ✅ PASS | — | — |
 | TC-030 | Validation rejects empty banner text | ❌ FAIL | `expect "Banner text is required" to be visible` | Save succeeded with an empty value |
 
-…and writes `qa-results-YYYY-MM-DD.csv` with eleven columns (ID, Title, Suite,
-Tags, Status, Failed Step, Reason, Duration, Screenshot, Notes, Run At), properly
-quoted so a failure reason containing commas, quotes or newlines survives a
-round trip into Sheets or Excel.
+…and writes a CSV built to be read, not just parsed:
+
+| Column | Notes |
+|---|---|
+| ID, **Status**, Title | Status second — it is what you scan for |
+| Suite, Tags | For filtering in Sheets |
+| Duration (s) | One decimal |
+| Failed Step, Reason | Collapsed to a single line |
+| Screenshot, Notes, Run At | `2026-09-01 13:04`, not an ISO string |
+
+Four details that make the difference between a file you can read and one you
+fight:
+
+- **Rows are ordered FAIL → BLOCKED → SKIPPED → PASS**, then by ID numerically
+  (so `TC-9` precedes `TC-10`). What needs attention is at the top.
+- **Multi-line reasons are flattened** to one line with ` · ` separators. A
+  Playwright call log left intact makes one row tall enough to hide every other
+  result. The complete text stays in the HTML report and in the `.txt` beside
+  the screenshot.
+- **A UTF-8 BOM** is written, so Excel reads currency symbols and accented text
+  correctly instead of mangling them.
+- **CRLF line endings** per RFC 4180, and every cell quoted properly — a reason
+  containing commas, quotes and newlines round-trips intact.
 
 Exit code is non-zero when anything failed.
 

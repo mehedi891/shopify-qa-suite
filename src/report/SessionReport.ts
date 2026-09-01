@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { ResultRecord } from './csv.js';
-import { writeResultsCsv } from './csv.js';
+import { sortForReport, writeResultsCsv } from './csv.js';
 
 export interface WrittenReport {
   dir: string;
@@ -63,7 +63,7 @@ function renderHtml(records: ResultRecord[], opts: { store?: string; app?: strin
   </div>
 </header>
 <main>
-${records.map(renderCase).join('\n')}
+${sortForReport(records).map(renderCase).join('\n')}
 </main>`;
 }
 
