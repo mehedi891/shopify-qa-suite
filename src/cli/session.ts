@@ -6,7 +6,7 @@ import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
 import { toMarkdownTable, type ResultRecord } from '../report/csv.js';
 import { writeSessionReport } from '../report/SessionReport.js';
-import { reportDir } from '../report/paths.js';
+import { reportDir, runStamp } from '../report/paths.js';
 import type { PlayedStep } from '../session/protocol.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
@@ -268,7 +268,7 @@ export async function record(input: ResultRecord): Promise<number> {
  * `qa results` — the run in three places at once: a table in the terminal (and
  * therefore in the chat), a CSV, and a self-contained HTML report folder.
  */
-export async function results(csvPath?: string, dir?: string): Promise<number> {
+export async function results(csvPath?: string, dir?: string, taskId?: string): Promise<number> {
   const records = loadRecords();
   if (records.length === 0) {
     console.log(pc.yellow('No results recorded yet.'));
@@ -282,8 +282,8 @@ export async function results(csvPath?: string, dir?: string): Promise<number> {
   console.log(`\n${passed} passed · ${failed} failed${other ? ` · ${other} other` : ''}`);
 
   // a durable folder, not a scratch directory that later gets cleaned up
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const outDir = dir ?? reportDir(stamp);
+  const stamp = runStamp();
+  const outDir = dir ?? reportDir(stamp, taskId);
   let store: string | undefined;
   let app: string | undefined;
   try {

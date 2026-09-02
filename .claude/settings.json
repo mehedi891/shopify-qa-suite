@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(./qa validate:*)",
+      "Bash(./qa task:*)",
+      "Bash(./qa status:*)",
+      "Bash(./qa detect:*)",
+      "Bash(./qa doctor:*)",
+      "Bash(./qa frames:*)",
+      "Bash(./qa snapshot:*)",
+      "Bash(./qa results:*)",
+      "Bash(npm test:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx tsc --noEmit)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.auth/**)",
+      "Read(./.qa-profile/**)",
+      "Read(./qa.apps.json)",
+      "Read(./*.service-account.json)"
+    ]
+  }
+}

@@ -9,6 +9,7 @@ import { resolveProfile } from '../config/apps.js';
 import { reportValidation } from './validate.js';
 import * as session from './session.js';
 import { runCommand } from './run.js';
+import { casesFile } from '../report/paths.js';
 
 const program = new Command();
 
@@ -41,14 +42,26 @@ function resolveSource(csv?: string, app?: string): TestCaseSource {
   return new SheetsSource({ spreadsheetId: sheetId, tab: sheetTab, serviceAccountJson: sheetsCredentials() });
 }
 
+/**
+ * `--task TIN-1234` is shorthand for the cases we generated for that task.
+ * Keeping the two flags in one place stops them drifting between commands.
+ */
+function resolveCaseFile(csv?: string, task?: string): string | undefined {
+  if (csv && task) {
+    throw new ConfigError('Pass either --csv or --task, not both.');
+  }
+  return task ? casesFile(task) : csv;
+}
+
 program
   .command('validate')
   .description('Parse-check the test cases without opening a browser')
   .option('--csv <file>', 'read from a local CSV instead of Google Sheets')
+  .option('--task <id>', 'validate the cases generated for a ClickUp task')
   .option('--app <name>', 'which app profile to validate')
   .option('-v, --verbose', 'print every parsed step')
-  .action(async (opts: { csv?: string; app?: string; verbose?: boolean }) => {
-    const source = resolveSource(opts.csv, opts.app);
+  .action(async (opts: { csv?: string; task?: string; app?: string; verbose?: boolean }) => {
+    const source = resolveSource(resolveCaseFile(opts.csv, opts.task), opts.app);
     const parsed = await source.load();
     const ok = reportValidation(source, parsed, { verbose: opts.verbose });
     process.exit(ok ? 0 : 1);
@@ -58,6 +71,7 @@ program
   .command('run')
   .description('Run test cases in a real browser')
   .option('--csv <file>', 'read from a local CSV instead of Google Sheets')
+  .option('--task <id>', 'run the cases generated for a ClickUp task')
   .option('--app <name>', 'which app profile to test (see qa.apps.json)')
   .option('--id <ids...>', 'run only these test case IDs')
   .option('--tag <tags...>', 'run only cases with these tags')
@@ -67,7 +81,7 @@ program
   .option('--no-write', 'do not write results back to the sheet')
   .option('-v, --verbose', 'print every step as it runs')
   .action(async (opts) => {
-    const code = await runCommand(resolveSource(opts.csv, opts.app), opts);
+    const code = await runCommand(resolveSource(resolveCaseFile(opts.csv, opts.task), opts.app), opts);
     process.exit(code);
   });
 
@@ -208,14 +222,17 @@ program
 program
   .command('suite')
   .description('Run every case in a CSV through the live browser session')
-  .requiredOption('--csv <file>', 'case file in the sheet column format')
+  .option('--csv <file>', 'case file in the sheet column format')
+  .option('--task <id>', 'run the cases generated for a ClickUp task')
   .option('--id <ids...>', 'only these case IDs')
   .option('--tag <tags...>', 'only cases with these tags')
   .option('--suite <suite>', 'only this suite')
   .option('--shots', 'screenshot every step, not just failures')
   .action(async (opts) => {
+    const csv = resolveCaseFile(opts.csv, opts.task);
+    if (!csv) throw new ConfigError('Nothing to run. Pass --task <id> or --csv <file>.');
     const { runSuite } = await import('./suite.js');
-    process.exit(await runSuite(opts));
+    process.exit(await runSuite({ ...opts, csv }));
   });
 
 program
@@ -269,8 +286,22 @@ program
   .description('Print the run as a table and write a CSV + HTML report folder')
   .option('--csv <path>', 'where to write the CSV (default: inside the report folder)')
   .option('--dir <path>', 'report folder (default: "Test Result/<timestamp>")')
-  .action(async (opts: { csv?: string; dir?: string }) =>
-    process.exit(await session.results(opts.csv, opts.dir)));
+  .option('--task <id>', 'file the report under that ClickUp task')
+  .action(async (opts: { csv?: string; dir?: string; task?: string }) =>
+    process.exit(await session.results(opts.csv, opts.dir, opts.task)));
+
+program
+  .command('task [id]')
+  .description('Show one ClickUp task\'s cases, reports and sheet links — or list them all')
+  .option('--title <title>', 'record the task title')
+  .option('--url <url>', 'record the ClickUp task URL')
+  .option('--cases-sheet <url>', 'record the Google Sheet holding the generated cases')
+  .option('--report-sheet <url>', 'record the Google Sheet holding a run report')
+  .option('--stamp <folder>', 'which report the --report-sheet belongs to (default: the newest)')
+  .action(async (id: string | undefined, opts) => {
+    const { taskCommand } = await import('./task.js');
+    process.exit(await taskCommand(id, opts));
+  });
 
 program
   .command('results-clear')

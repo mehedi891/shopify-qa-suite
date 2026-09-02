@@ -19,3 +19,6 @@ artifacts/
 reports/
 test-results/
 .qa-profile/
+
+# personal, per-machine agent settings
+.claude/settings.local.json

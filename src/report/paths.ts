@@ -12,7 +12,47 @@ export const RESULT_ROOT = 'Test Result';
 /** Screenshots taken while steps run, before any report exists. */
 export const WORKING_SHOTS = join(RESULT_ROOT, 'screenshots');
 
-/** One folder per report, holding the html, the csv and its own screenshots. */
-export function reportDir(stamp: string): string {
-  return join(RESULT_ROOT, stamp);
+/**
+ * A task id turned into something safe to use as a folder name.
+ *
+ * Task ids come from a chat message, so they are untrusted input that we are
+ * about to turn into a filesystem path. Only letters, digits, dash and
+ * underscore survive — dots included, so no id can spell `..` — and an id left
+ * with nothing usable is rejected rather than silently becoming a stray folder.
+ */
+export function taskSlug(taskId: string): string {
+  const slug = taskId.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!slug) {
+    throw new Error(`"${taskId}" is not a usable task id — use something like TIN-1234.`);
+  }
+  return slug.toUpperCase();
+}
+
+/** Everything belonging to one ClickUp task: its cases, its reports, its metadata. */
+export function taskDir(taskId: string): string {
+  return join(RESULT_ROOT, taskSlug(taskId));
+}
+
+/** The generated test cases — the local twin of the cases Google Sheet. */
+export function casesFile(taskId: string): string {
+  return join(taskDir(taskId), 'cases.csv');
+}
+
+/** Task metadata: title, ClickUp link, and the sheets we uploaded for it. */
+export function taskMetaFile(taskId: string): string {
+  return join(taskDir(taskId), 'task.json');
+}
+
+/**
+ * One folder per report, holding the html, the csv and its own screenshots.
+ * Reports for a task nest under it, so a task folder is a complete record of
+ * that feature: the cases, and every run of them.
+ */
+export function reportDir(stamp: string, taskId?: string): string {
+  return taskId ? join(taskDir(taskId), stamp) : join(RESULT_ROOT, stamp);
+}
+
+/** A filesystem- and sheet-friendly stamp for "now": 2026-09-02T14-31-07. */
+export function runStamp(at: Date = new Date()): string {
+  return at.toISOString().replace(/[:.]/g, '-').slice(0, 19);
 }

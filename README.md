@@ -264,6 +264,8 @@ On Windows, drop the `./` from every command below.
 | `./qa status` | Show what store and page you are on |
 | `./qa validate --csv <file>` | Check your test file for mistakes |
 | `./qa suite --csv <file>` | Run all the tests in a file |
+| `./qa task TIN-1234` | Show one ClickUp task's cases, runs and sheet links |
+| `./qa task` | List every task you have tested |
 | `./qa play 'step one' 'step two'` | Run a few steps right now |
 | `./qa do 'click "Save"'` | Run one step |
 | `./qa snapshot` | Show what is on the page right now |
@@ -278,6 +280,16 @@ Run only some tests:
 ```bash
 ./qa suite --csv cases/my-tests.csv --tag smoke
 ./qa suite --csv cases/my-tests.csv --id TC-001
+```
+
+`validate`, `run`, `suite` and `results` also take `--task TIN-1234` instead of
+`--csv`. That is shorthand for the cases generated for that ClickUp task, and it
+files the report under that task too:
+
+```bash
+./qa validate --task TIN-1234
+./qa suite --task TIN-1234
+./qa results --task TIN-1234
 ```
 
 ---
@@ -437,21 +449,64 @@ into the store, not into each app.
 
 ## Where your results are saved
 
-Everything a run produces goes in the **`Test Result`** folder:
+Everything a run produces goes in the **`Test Result`** folder, grouped by the
+ClickUp task it belongs to:
 
 ```
 Test Result/
-├── screenshots/              ← pictures taken while tests run
-└── 2026-09-01T13-04-57/      ← one folder per report
-    ├── report.html           ← open this in your browser
-    ├── results.csv           ← open this in Excel or Google Sheets
-    └── screenshots/          ← copies of the pictures for this report
+├── screenshots/                  ← pictures taken while tests run
+└── TIN-1234/                     ← one folder per ClickUp task
+    ├── task.json                 ← the task title and its sheet links
+    ├── cases.csv                 ← the tests for this task
+    └── 2026-09-02T14-31-07/      ← one folder per run
+        ├── report.html           ← open this in your browser
+        ├── results.csv           ← open this in Excel or Google Sheets
+        └── screenshots/          ← copies of the pictures for this run
 ```
+
+Not working from a ClickUp task? Then reports land straight in
+`Test Result/<timestamp>/` and everything else works the same.
 
 You can zip a report folder and send it to your team. The pictures still work.
 
 This folder is not saved to GitHub, because results belong to a run, not to the
 code.
+
+> The folder name has a space in it, so quote it if you ever type it:
+> `./qa results --dir "Test Result/my-run"`.
+
+---
+
+## Starting from a ClickUp task
+
+If you use ClickUp, you don't have to write the test file yourself. Give Claude
+a task id and it does the whole loop:
+
+1. **Reads** the ClickUp task and its TIN doc
+2. **Writes** the test cases into `Test Result/TIN-1234/cases.csv` and uploads
+   them as a Google Sheet for you to review
+3. **Runs** them in your browser once you approve
+4. **Reports** back — in the chat, as an HTML report, and as a second Google
+   Sheet
+
+Just say:
+
+> QA TIN-1234
+
+Claude reads the procedure from `.claude/skills/qa-from-clickup/`, which is part
+of this repo — so it works the same for anyone who clones it.
+
+**A note on the sheets.** A Google Sheet lives in Google Drive, not on your
+computer. So each sheet has a twin CSV in `Test Result/`, and the link to the
+sheet is saved in `task.json`. The CSV is what the tool runs; the sheet is what
+your team reads. Both come from the same file, so they can never disagree.
+
+```bash
+./qa task TIN-1234     # where are this task's cases, runs and sheets?
+./qa task              # every task you have tested
+```
+
+---
 
 ## A note on safety
 
