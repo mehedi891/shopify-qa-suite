@@ -460,7 +460,8 @@ Test Result/
     ├── cases.csv                 ← the tests for this task
     └── 2026-09-02T14-31-07/      ← one folder per run
         ├── report.html           ← open this in your browser
-        ├── results.csv           ← open this in Excel or Google Sheets
+        ├── results.csv           ← one row per test: pass or fail
+        ├── issues.csv            ← one row per problem found
         └── screenshots/          ← copies of the pictures for this run
 ```
 
@@ -485,9 +486,11 @@ a task id and it does the whole loop:
 1. **Reads** the ClickUp task and its TIN doc
 2. **Writes** the test cases into `Test Result/TIN-1234/cases.csv` and uploads
    them as a Google Sheet for you to review
-3. **Runs** them in your browser once you approve
-4. **Reports** back — in the chat, as an HTML report, and as a second Google
-   Sheet
+3. **Runs** them in your browser once you approve — pulling your edits back
+   from the sheet first, so what you approved is what runs
+4. **Reports** back — in the chat, as an HTML report, and as two more Google
+   Sheets: the **report** (one row per test) and the **issues** (one row per
+   problem, with numbered steps to reproduce it and a link to the picture)
 
 Just say:
 
@@ -496,10 +499,22 @@ Just say:
 Claude reads the procedure from `.claude/skills/qa-from-clickup/`, which is part
 of this repo — so it works the same for anyone who clones it.
 
+You get three sheets per task:
+
+| Sheet | What it is |
+|---|---|
+| **QA Cases** | The tests. Edit this one — your changes are pulled back before the next run. |
+| **QA Report** | One row per test: passed, failed, blocked or skipped. |
+| **QA Issues** | One row per problem, with numbered steps to reproduce it, what was expected, what happened, and a link to the picture. |
+
 **A note on the sheets.** A Google Sheet lives in Google Drive, not on your
 computer. So each sheet has a twin CSV in `Test Result/`, and the link to the
 sheet is saved in `task.json`. The CSV is what the tool runs; the sheet is what
 your team reads. Both come from the same file, so they can never disagree.
+
+A spreadsheet can't show a picture from Drive inside a cell, so the issues sheet
+**links** to each screenshot. If you want the pictures on the page, open
+`report.html` — they are built into it.
 
 ```bash
 ./qa task TIN-1234     # where are this task's cases, runs and sheets?

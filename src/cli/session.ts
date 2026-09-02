@@ -6,7 +6,7 @@ import type { LaunchMode } from '../session/launch.js';
 import { readSession, send } from '../session/client.js';
 import { toMarkdownTable, type ResultRecord } from '../report/csv.js';
 import { writeSessionReport } from '../report/SessionReport.js';
-import { reportDir, runStamp } from '../report/paths.js';
+import { casesFile, reportDir, runStamp } from '../report/paths.js';
 import type { PlayedStep } from '../session/protocol.js';
 import { SESSION_FILE } from '../session/protocol.js';
 
@@ -292,11 +292,33 @@ export async function results(csvPath?: string, dir?: string, taskId?: string): 
     app = info.appHandle;
   } catch { /* no live session: the report is still worth writing */ }
 
-  const written = writeSessionReport(records, { dir: outDir, store, app, csvPath });
+  const written = writeSessionReport(records, {
+    dir: outDir, store, app, csvPath, taskId, cases: await loadCases(taskId),
+  });
   console.log(pc.dim(`\nreport: ${written.htmlPath}`));
   console.log(pc.dim(`csv:    ${written.csvPath}`));
+  if (written.issueCount) {
+    console.log(pc.yellow(`issues: ${written.issuesPath} (${written.issueCount})`));
+  }
   if (written.screenshots) console.log(pc.dim(`        ${written.screenshots} screenshot(s) copied alongside`));
   return failed > 0 ? 1 : 0;
+}
+
+/**
+ * The task's cases, when we have them — an issue is only reproducible if we can
+ * say which steps got there, and those live in the case file, not the results.
+ */
+async function loadCases(taskId?: string) {
+  if (!taskId) return undefined;
+  const path = casesFile(taskId);
+  if (!existsSync(path)) return undefined;
+  try {
+    const { CsvSource } = await import('../source/CsvSource.js');
+    const parsed = await new CsvSource(path).load();
+    return parsed.cases;
+  } catch {
+    return undefined; // a report without repro steps still beats no report
+  }
 }
 
 export async function clearResults(): Promise<number> {

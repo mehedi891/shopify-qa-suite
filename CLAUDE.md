@@ -21,8 +21,8 @@ Work starts from a **ClickUp task id** and ends in a **report sheet**. Three pha
 | Phase | Who does it | Output |
 |---|---|---|
 | 1. Generate | Agent reads the ClickUp task + its TIN doc, **reads the live app for the real labels**, then writes the cases and their steps | `Test Result/<TASK-ID>/cases.csv` + a Google Sheet |
-| 2. Verify | `./qa suite --task <TASK-ID>` drives the browser through every case | a verdict per case |
-| 3. Report | `./qa results --task <TASK-ID>`, then upload | `Test Result/<TASK-ID>/<stamp>/` + a report sheet |
+| 2. Verify | Pull the cases sheet back, then `./qa suite --task <TASK-ID>` drives the browser | a verdict per case |
+| 3. Report | `./qa results --task <TASK-ID>`, then upload | `Test Result/<TASK-ID>/<stamp>/` + a report sheet **and an issues sheet** |
 
 The doc says what the feature should do; only the running app says what its
 controls are called. Both go into the cases — a step written against an
@@ -32,11 +32,23 @@ The full procedure is the **`qa-from-clickup` skill** — read it before startin
 any of this. It has the ClickUp lookup order, the sheet upload calls, and the
 rules for writing cases that actually run.
 
+Three sheets per task, because a CSV upload becomes a **one-tab** spreadsheet:
+
+| Sheet | From | Holds |
+|---|---|---|
+| `QA Cases · <TASK-ID>` | `cases.csv` | the tests — **edit here**, the run pulls this back before it starts |
+| `QA Report · <TASK-ID> · <stamp>` | `results.csv` | one row per case: pass, fail, blocked, skipped |
+| `QA Issues · <TASK-ID> · <stamp>` | `issues.csv` | one row per defect: numbered repro steps, expected vs actual, screenshot link |
+
 **A Google Sheet lives in Drive, not on disk.** So every sheet has a local CSV
-twin under `Test Result/`, and the sheet's link is recorded in
+twin under `Test Result/`, and its link is recorded in
 `Test Result/<TASK-ID>/task.json`. The CSV is what the runner reads; the sheet
-is what people read. They are generated from the same file, so they cannot
-disagree.
+is what people read and edit. They come from the same file, so they cannot
+disagree — provided you **pull the cases sheet before every run**.
+
+Sheets cannot render a Drive image inline (`=IMAGE()` needs a public URL, and we
+share by email). The issues sheet therefore links to each screenshot;
+`report.html` is where they are embedded.
 
 ## Layout
 
@@ -47,8 +59,9 @@ Test Result/
     ├── task.json                 ← title, ClickUp link, sheet links
     ├── cases.csv                 ← generated cases = the cases sheet
     └── 2026-09-02T14-31-07/      ← one folder per run
-        ├── report.html
+        ├── report.html           ← screenshots embedded inline
         ├── results.csv           ← = the report sheet
+        ├── issues.csv            ← = the issues sheet
         └── screenshots/
 ```
 

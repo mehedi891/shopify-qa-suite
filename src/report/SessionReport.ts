@@ -1,12 +1,16 @@
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import type { TestCase } from '../types.js';
 import type { ResultRecord } from './csv.js';
 import { sortForReport, writeResultsCsv } from './csv.js';
+import { buildIssues, writeIssuesCsv } from './issues.js';
 
 export interface WrittenReport {
   dir: string;
   csvPath: string;
   htmlPath: string;
+  issuesPath: string;
+  issueCount: number;
   screenshots: number;
 }
 
@@ -20,7 +24,7 @@ export interface WrittenReport {
  */
 export function writeSessionReport(
   records: ResultRecord[],
-  opts: { dir: string; store?: string; app?: string; csvPath?: string } ,
+  opts: { dir: string; store?: string; app?: string; csvPath?: string; cases?: TestCase[]; taskId?: string },
 ): WrittenReport {
   const shotsDir = join(opts.dir, 'screenshots');
   mkdirSync(opts.dir, { recursive: true });
@@ -41,7 +45,12 @@ export function writeSessionReport(
   const htmlPath = join(opts.dir, 'report.html');
   writeFileSync(htmlPath, renderHtml(localised, opts));
 
-  return { dir: opts.dir, csvPath, htmlPath, screenshots };
+  // issues are built from the localised records, so a screenshot path in the
+  // issues sheet points at the copy that ships with the report
+  const issues = buildIssues(localised, opts.cases, { taskId: opts.taskId });
+  const issuesPath = writeIssuesCsv(join(opts.dir, 'issues.csv'), issues);
+
+  return { dir: opts.dir, csvPath, htmlPath, issuesPath, issueCount: issues.length, screenshots };
 }
 
 function renderHtml(records: ResultRecord[], opts: { store?: string; app?: string }): string {

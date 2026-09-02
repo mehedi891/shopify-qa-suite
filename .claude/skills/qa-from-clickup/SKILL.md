@@ -1,6 +1,6 @@
 ---
 name: qa-from-clickup
-description: Run the QA flow for a Shopify app feature end to end, starting from a ClickUp task id (e.g. TIN-1234). Reads the task and its TIN doc, generates test cases into a Google Sheet, runs them against the live store in a real browser, and produces a report sheet. Use whenever someone gives a ClickUp task id, a TIN doc link, or asks to QA / test / verify a feature or a bug.
+description: Run the QA flow for a Shopify app feature end to end, starting from a ClickUp task id (e.g. TIN-1234). Reads the task and its TIN doc, generates test cases into a Google Sheet, pulls that sheet back to run against the live store in a real browser, then produces a report sheet and an issues sheet with reproduction steps and screenshots. Use whenever someone gives a ClickUp task id, a TIN doc link, or asks to QA / test / verify a feature or a bug.
 ---
 
 # QA a feature from its ClickUp task
@@ -145,7 +145,29 @@ about.
 Shopify admin and confirm before continuing — Shopify's SSO will not accept an
 automated login, which is exactly why the flow is shaped this way.
 
-### 2b. Run
+### 2b. Pull the cases back from the sheet, then run
+
+**The sheet is the source of truth, not your local file.** Between Phase 1 and
+now, the human may have fixed a label, added a case, or disabled one. Running
+your own copy silently discards their edits and reports on tests they never
+approved.
+
+So pull first, every time:
+
+```
+Google_Drive:search_files(query: "title contains 'QA Cases · TIN-1234'")     # if you need the id
+Google_Drive:download_file_content(fileId: "<cases sheet id>", exportMimeType: "text/csv")
+```
+
+Decode it, write it over `Test Result/TIN-1234/cases.csv`, and re-validate — a
+hand-edited sheet is exactly where a typo comes from:
+
+```bash
+./qa validate --task TIN-1234
+```
+
+If validation now fails, **fix the sheet, not just the local file**, or the next
+pull loses the fix. Then run:
 
 ```bash
 ./qa suite --task TIN-1234
@@ -168,34 +190,73 @@ app is wrong, that is a finding — with a screenshot and exact steps.
 
 ---
 
-## Phase 3 — Report
+## Phase 3 — Report sheet + issues sheet
 
 ```bash
 ./qa results --task TIN-1234
 ```
 
-This writes `Test Result/TIN-1234/<stamp>/` with `results.csv`, `report.html`
-and the screenshots, and prints the table for the chat.
+That writes `Test Result/TIN-1234/<stamp>/` containing:
 
-Upload the results as the report sheet:
+| File | What it is |
+|---|---|
+| `results.csv` | one row per case — the **report sheet** |
+| `issues.csv` | one row per failure or block, with repro steps — the **issues sheet** |
+| `report.html` | the same thing for humans, with the screenshots **inline** |
+| `screenshots/` | the picture behind every failure |
+
+`issues.csv` is built by joining the verdicts back to the cases, so each issue
+already carries numbered steps that stop at the step that broke, what was
+expected, what actually happened, and the screenshot path. You do not write
+these by hand.
+
+### 3a. Upload the screenshots first
+
+An issue without its picture is an argument. Upload each screenshot referenced
+in `issues.csv`, then put its link in that row:
 
 ```
 Google_Drive:create_file(
-  title: "QA Report · TIN-1234 · <stamp>",
-  textContent: <the exact contents of results.csv>,
-  contentMimeType: "text/csv")
+  title: "TIN-1234-01 · TC-003 · daily limit not saved.png",
+  base64Content: <the png, base64 encoded>,
+  contentMimeType: "image/png")
 ```
+
+Name each file after **the issue it belongs to**, so the link is self-describing
+once it is out of the folder.
+
+> **Sheets cannot show a Drive image inline.** `=IMAGE()` needs a publicly
+> reachable URL, and we only share by email — so the Screenshot column holds a
+> **link**, not a thumbnail. If someone wants pictures on the page, send them
+> `report.html`, where they are embedded. Say this plainly rather than shipping
+> a sheet full of broken `=IMAGE()` cells.
+
+### 3b. Upload the two sheets
+
+Replace the local screenshot paths in `issues.csv` with the Drive links you just
+got, then upload both:
+
+```
+Google_Drive:create_file(title: "QA Report · TIN-1234 · <stamp>",
+  textContent: <results.csv>, contentMimeType: "text/csv")
+
+Google_Drive:create_file(title: "QA Issues · TIN-1234 · <stamp>",
+  textContent: <issues.csv with the screenshot links>, contentMimeType: "text/csv")
+```
+
+A CSV upload becomes a one-tab spreadsheet, which is why the report and the
+issues are **two sheets, not two tabs**. Record both:
 
 ```bash
-./qa task TIN-1234 --report-sheet "<the sheet url>"
+./qa task TIN-1234 --report-sheet "<report sheet url>"
 ```
 
-Then report in chat:
+### 3c. Say it in chat
 
 - the counts — passed / failed / blocked / skipped
-- **every** failure: case id, the step that failed, what was expected, what
-  happened, and the screenshot path
-- the report sheet link and the local report folder
+- **every** issue: its id, the case, the step that broke, expected vs actual,
+  and the screenshot link
+- links to the report sheet, the issues sheet, and the local report folder
 - what you did **not** cover, and why (checkout completion is done by hand)
 
 Optionally comment the summary back on the task with
@@ -212,3 +273,13 @@ Optionally comment the summary back on the task with
 - If a finding stops reproducing, retract it plainly. Say what changed.
 - Destructive steps (deleting data, placing real orders) need the human's
   go-ahead first, and a teardown that puts the store back.
+- **The sheet wins.** Pull before every run; never report on a case list the
+  human has not seen.
+- **A sheet is one tab.** Cases, report and issues are three separate sheets.
+  Do not promise tabs this flow cannot create.
+- **Every issue needs steps and a picture.** If a failure produced no
+  screenshot, rerun that case with `--shots` before writing it up.
+- **Only failures and blocks become issues.** A passing case is not an issue,
+  and a blocked one is filed as unverified — never as a defect you confirmed.
+- **Do not invent a severity.** It comes from the case's tags, or it stays
+  `Untriaged` for a human to set.
