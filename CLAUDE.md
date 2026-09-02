@@ -20,9 +20,13 @@ Work starts from a **ClickUp task id** and ends in a **report sheet**. Three pha
 
 | Phase | Who does it | Output |
 |---|---|---|
-| 1. Generate | Agent reads the ClickUp task + its TIN doc, writes test cases | `Test Result/<TASK-ID>/cases.csv` + a Google Sheet |
-| 2. Run | `./qa suite --task <TASK-ID>` drives the browser | a verdict per case |
+| 1. Generate | Agent reads the ClickUp task + its TIN doc, **reads the live app for the real labels**, then writes the cases and their steps | `Test Result/<TASK-ID>/cases.csv` + a Google Sheet |
+| 2. Verify | `./qa suite --task <TASK-ID>` drives the browser through every case | a verdict per case |
 | 3. Report | `./qa results --task <TASK-ID>`, then upload | `Test Result/<TASK-ID>/<stamp>/` + a report sheet |
+
+The doc says what the feature should do; only the running app says what its
+controls are called. Both go into the cases — a step written against an
+invented label fails for a reason that is not a bug.
 
 The full procedure is the **`qa-from-clickup` skill** — read it before starting
 any of this. It has the ClickUp lookup order, the sheet upload calls, and the

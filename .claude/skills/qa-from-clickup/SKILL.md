@@ -39,24 +39,57 @@ clickup_get_document_pages(document_id: "…", page_ids: [...], content_format: 
 Read **every** page. Acceptance criteria, edge cases and "not valid" notes are
 often on a later page than the summary.
 
-### 1b. Understand the app before writing cases
+### 1b. Look at the real app before writing a single step
 
-If a browser session is already open, look at the actual UI rather than guessing
-labels — a case that names a button that does not exist is a wasted run:
+**Required, not optional.** The doc tells you *what* to test. Only the app tells
+you what the controls are actually called. A case written against a label you
+imagined fails in Phase 2 for a reason that is not a bug — and every one of
+those costs a browser session and a round of "is this real?".
 
 ```bash
-./qa status
-./qa snapshot --frame app --max 4000
+./qa status                        # is a session already open?
+./qa start                         # if not — the human logs in
+./qa detect                        # store, app handle, iframe host
 ```
 
-If no session is open, write the cases from the doc and expect to fix labels in
-Phase 2. Say so, rather than presenting guessed labels as verified.
+Then walk the feature the way the doc describes it, reading the page at each
+stop:
+
+```bash
+./qa admin "/apps/<app-handle>/app/products"
+./qa snapshot --frame app --max 4000     # our app's iframe
+./qa snapshot --frame host               # modals, save bar, toasts
+./qa do 'click "Individual Products"'
+./qa snapshot --frame app
+```
+
+Take from the snapshot, verbatim:
+
+- the **exact text** of every button, field, toggle and tab you will name
+- which **frame** each one lives in — App Bridge modals, the save bar and
+  toasts are in `host`, not `app`
+- the real **success signal** after a save: the toast wording, or the value that
+  changes on screen
+- what the storefront actually renders, if the feature crosses surfaces:
+  `./qa storefront "/products/<handle>"` then `./qa snapshot`
+
+**Never invent a label.** If the doc names a control you cannot find in the
+snapshot, that is itself worth reporting — either the doc is stale or the
+feature is not built. Say which; do not paper over it with a guess.
+
+If the human cannot give you a session right now, you may draft from the doc
+alone — but say plainly in chat that the labels are **unverified** and must be
+grounded before the run. Do not present a guessed label as a fact.
 
 ### 1c. Write the cases
 
 Read **`reference/writing-cases.md`** in this skill folder for the column
 format, the step grammar, and what separates a case that runs from one that
 looks right and fails.
+
+Each case is a row; its `Steps` cell is one step per line, in the grammar the
+parser accepts. Use the labels you just read off the app, and add ` in host` to
+any step whose target lives in Shopify's frame rather than ours.
 
 Write to the task's own folder:
 
