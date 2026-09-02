@@ -80,6 +80,21 @@ expect "{bannerText}" to be visible
 `{random}` gives a fresh value each run, so repeated runs do not collide:
 `fill "Banner text" with "Sale {random}"`.
 
+**Setting up test data and ordering** — one line each, expanded into real
+steps so a failure names the click that broke:
+
+```
+create a product named "{productName}" with price "19.99" and inventory "5"
+delete the product named "{productName}"
+fill in the test checkout details
+place a test order
+place a test order with card "1"          ← Bogus Gateway's success card
+```
+
+The checkout address, the card and the test-mode gate all come from
+`qa.config.ts` → `testData`. They are **not** guessable — the address has to be
+one your store ships to — so set them once per store rather than per case.
+
 **When a name is not enough**, point straight at the element:
 
 ```
@@ -113,6 +128,49 @@ click "Delete" in host
   in B's own steps.
 - **Checkout completion is manual.** Cover up to "add to cart" and the cart page;
   leave placing the order to a human and mark the case accordingly.
+
+## Making your own test data
+
+A case that depends on a product already existing in the store fails the day
+someone deletes it, and the failure looks like a bug in the app. Create what you
+need, and delete it in teardown.
+
+**Pin the name first.** `{random}` is a fresh value every time it is read, so a
+product created as `Widget {random}` and deleted as `Widget {random}` are two
+different names — the teardown quietly deletes nothing and the store fills with
+junk. `qa validate` warns about this, but the pattern to use is:
+
+```
+Steps:     save "QA Widget {random}" as productName
+           create a product named "{productName}" with price "19.99" and inventory "5"
+           switch to storefront
+           go to the product page for "{productName}"
+           ...
+Teardown:  delete the product named "{productName}"
+```
+
+## Placing an order
+
+`place a test order` submits a real order. It is safe to use **only** on a
+development store with test payments switched on, and it protects itself: the
+first thing it does is check the checkout says `Test mode` (whatever
+`testData.testModeText` is set to). If that text is not there, the case fails
+and nothing is submitted.
+
+That is the right direction to be wrong in — a wrongly-configured gate costs you
+a failed test, not a real charge.
+
+Before the first ordering case on a store, **ask the human to confirm** it is a
+dev store with test payments on. After that, the gate carries it.
+
+```
+Steps:     go to the product page for "{productName}"
+           click "Add to cart"
+           go to "/checkout"
+           fill in the test checkout details
+           place a test order
+Expected:  expect "Thank you" to be visible
+```
 
 ## Turning a doc into cases
 

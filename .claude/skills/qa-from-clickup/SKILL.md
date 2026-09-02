@@ -167,7 +167,12 @@ hand-edited sheet is exactly where a typo comes from:
 ```
 
 If validation now fails, **fix the sheet, not just the local file**, or the next
-pull loses the fix. Then run:
+pull loses the fix.
+
+`qa validate` also prints a warning for every step that changes real store data
+— creating a product, deleting one, placing an order. **Show those warnings to
+the human and get a yes** before the first run against a store. After that they
+are a reminder, not a gate. Then run:
 
 ```bash
 ./qa suite --task TIN-1234
@@ -271,8 +276,19 @@ Optionally comment the summary back on the task with
 - **Never** commit anything under `Test Result/` — it is gitignored for a reason.
 - Report BLOCKED as BLOCKED. An unrun case is not a passing case.
 - If a finding stops reproducing, retract it plainly. Say what changed.
-- Destructive steps (deleting data, placing real orders) need the human's
-  go-ahead first, and a teardown that puts the store back.
+- **A case makes its own test data.** If it needs a product, it creates one and
+  deletes it in teardown — never assume the store already has one, or the case
+  fails the day someone tidies up and the failure looks like an app bug.
+- **Destructive steps need the human's go-ahead the first time.** Creating
+  products, deleting them, and placing orders all change the real store.
+  `qa validate` prints a warning for each one; show those warnings and get a yes
+  before the first run on a store you have not ordered on before.
+- **Ordering only happens on a development store with test payments on.**
+  `place a test order` checks the checkout for the test-mode text and refuses
+  otherwise — but confirm it with the human rather than relying on the gate
+  alone.
+- **Every teardown gets checked.** Reload and confirm the product is gone. In
+  this app, deletes have not always persisted.
 - **The sheet wins.** Pull before every run; never report on a case list the
   human has not seen.
 - **A sheet is one tab.** Cases, report and issues are three separate sheets.

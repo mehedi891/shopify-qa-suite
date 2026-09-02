@@ -242,6 +242,44 @@ expect "{bannerText}" to be visible
 fill "Banner text" with "Sale {random}"
 ```
 
+### Making test data and placing orders
+
+If a test needs a product, it can make its own — and clean it up afterwards:
+
+```
+save "QA Widget {random}" as productName
+create a product named "{productName}" with price "19.99" and inventory "5"
+```
+
+and in the **Teardown** column:
+
+```
+delete the product named "{productName}"
+```
+
+> Save the name first. `{random}` gives a **different** value every time it is
+> read, so creating `Widget {random}` and deleting `Widget {random}` would be two
+> different products. `./qa validate` warns you if you forget.
+
+To buy something:
+
+```
+go to the product page for "{productName}"
+click "Add to cart"
+go to "/checkout"
+fill in the test checkout details
+place a test order
+```
+
+**`place a test order` places a real order.** Only use it on a development store
+with test payments turned on. It checks for itself: before it types a card
+number it looks for the words **Test mode** on the checkout, and stops if they
+are not there.
+
+The address, the card and that test-mode wording are all in `qa.config.ts` under
+`testData`. Set them once for your store — the defaults are a starting point,
+not something that will work everywhere.
+
 ### When words are not enough
 
 If the tool can't find a button by its name, you can point straight at it:

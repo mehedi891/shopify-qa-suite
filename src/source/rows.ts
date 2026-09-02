@@ -92,6 +92,8 @@ export function rowsToTestCases(header: string[], rows: RawRow[]): ParsedSheet {
       // so prose there is a note to the reader, not a broken test.
       const severity: ParseIssue['severity'] = origin === 'precondition' ? 'warning' : 'error';
       res.errors.forEach((e) => add(col, e.message, e.line, severity));
+      // steps that create or destroy real store data say so on every run
+      res.warnings.forEach((w) => add(col, w.message, w.line, 'warning'));
       surface = res.endSurface;
       index += res.steps.length;
       return res.steps;

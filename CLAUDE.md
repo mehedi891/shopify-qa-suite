@@ -105,8 +105,35 @@ These were all learned the hard way in live runs. They are not theoretical.
   fall back to clicking the associated label; that is deliberate, don't "fix" it.
 - **Deletes in our app have not always persisted.** Reload before declaring
   anything cleaned up or removed.
+- **`{random}` is a new value every time it is read.** Pin it once with
+  `save "Widget {random}" as productName` before using it in two places.
 - **Two "Add to cart" buttons is normal** (the sticky bar is the second one). A
   passing assertion may have found the wrong one — target it explicitly.
+
+## Making test data, and ordering
+
+A case that needs a product creates one and deletes it in teardown. One line
+each, expanded at parse time into ordinary steps:
+
+```
+create a product named "{productName}" with price "19.99" and inventory "5"
+delete the product named "{productName}"
+fill in the test checkout details
+place a test order
+```
+
+The expansions live in `src/source/macros.ts` — one place to fix when Shopify
+renames a field. The address, card and test-mode text live in `qa.config.ts`
+under `testData`, because none of them are guessable per store.
+
+**`place a test order` submits a real order.** It gates itself: the first thing
+it does is assert the checkout shows the configured test-mode text, so a
+misconfigured gate costs a failed test rather than a real charge. Use it only on
+a development store with test payments on, and confirm with the human before the
+first ordering run on a store.
+
+`qa validate` prints a warning for every step that changes real store data.
+Those warnings are meant to be shown, not skipped past.
 
 ## Non-negotiables
 

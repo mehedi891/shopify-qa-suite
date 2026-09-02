@@ -1,3 +1,5 @@
+import config from '../../qa.config.js';
+import { expandMacro, type TestData } from './macros.js';
 import type {
   Action, Assertion, ParseIssue, Step, SurfaceName, Target, FrameHint,
 } from '../types.js';
@@ -244,6 +246,8 @@ export function parseStepLine(
 export interface ParseBlockResult {
   steps: Step[];
   errors: { line: number; message: string }[];
+  /** Non-blocking notes — today, the steps that change real store data. */
+  warnings: { line: number; message: string }[];
   /** Surface in effect after the block, so later columns continue correctly. */
   endSurface: SurfaceName;
 }
@@ -257,6 +261,7 @@ export function parseStepBlock(
 ): ParseBlockResult {
   const steps: Step[] = [];
   const errors: { line: number; message: string }[] = [];
+  const warnings: { line: number; message: string }[] = [];
   let surface = startSurface;
   let index = startIndex;
 
@@ -264,20 +269,34 @@ export function parseStepBlock(
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]!;
     if (!raw.trim()) continue;
-    const { step, error } = parseStepLine(raw, index, surface, origin);
-    if (error) {
-      errors.push({ line: i + 1, message: error });
-      continue;
+
+    // a macro becomes several real steps, each keeping its own text — a
+    // failure then names the click that broke, not the macro that contained it
+    const macro = expandMacro(raw, config.testData as TestData);
+    const toParse = macro ? macro.lines : [raw];
+    if (macro?.warning) warnings.push({ line: i + 1, message: macro.warning });
+
+    for (const text of toParse) {
+      const { step, error } = parseStepLine(text, index, surface, origin);
+      if (error) {
+        // a broken expansion is our bug, not the author's — say which line of
+        // the sheet they should look at, and what it turned into
+        errors.push({
+          line: i + 1,
+          message: macro ? `${error} (expanded from "${raw.trim()}")` : error,
+        });
+        continue;
+      }
+      if (!step) continue;
+      if (step.action?.kind === 'switch' && step.action.surface) {
+        surface = step.action.surface;
+        step.surface = surface; // the switch itself belongs to the new surface
+      }
+      steps.push(step);
+      index++;
     }
-    if (!step) continue;
-    if (step.action?.kind === 'switch' && step.action.surface) {
-      surface = step.action.surface;
-      step.surface = surface; // the switch itself belongs to the new surface
-    }
-    steps.push(step);
-    index++;
   }
-  return { steps, errors, endSurface: surface };
+  return { steps, errors, warnings, endSurface: surface };
 }
 
 /**
