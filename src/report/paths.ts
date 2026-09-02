@@ -52,6 +52,20 @@ export function reportDir(stamp: string, taskId?: string): string {
   return taskId ? join(taskDir(taskId), stamp) : join(RESULT_ROOT, stamp);
 }
 
+/**
+ * A path as it should appear in a report, a CSV or a sheet — always with
+ * forward slashes.
+ *
+ * `join()` gives backslashes on Windows, which is right for the filesystem and
+ * wrong for everything a human or a browser reads: `src="screenshots\\x.png"`
+ * is not a portable relative URL, and `screenshots\\x.png` in a Google Sheet
+ * cell is just noise. Filesystem paths keep `join`; anything that leaves for a
+ * report goes through here.
+ */
+export function toPosix(path: string): string {
+  return path.replace(/\\/g, '/');
+}
+
 /** A filesystem- and sheet-friendly stamp for "now": 2026-09-02T14-31-07. */
 export function runStamp(at: Date = new Date()): string {
   return at.toISOString().replace(/[:.]/g, '-').slice(0, 19);

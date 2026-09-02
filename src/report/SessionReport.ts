@@ -4,6 +4,7 @@ import type { TestCase } from '../types.js';
 import type { ResultRecord } from './csv.js';
 import { sortForReport, writeResultsCsv } from './csv.js';
 import { buildIssues, writeIssuesCsv } from './issues.js';
+import { toPosix } from './paths.js';
 
 export interface WrittenReport {
   dir: string;
@@ -36,7 +37,9 @@ export function writeSessionReport(
     const name = basename(r.screenshot);
     copyFileSync(r.screenshot, join(shotsDir, name));
     screenshots++;
-    return { ...r, screenshot: join('screenshots', name) };
+    // forward slashes: this value is read by a browser and by a spreadsheet,
+    // neither of which wants a Windows separator
+    return { ...r, screenshot: toPosix(join('screenshots', name)) };
   });
 
   const csvPath = opts.csvPath ?? join(opts.dir, 'results.csv');

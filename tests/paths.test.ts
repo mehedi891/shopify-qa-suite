@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RESULT_ROOT, casesFile, reportDir, runStamp, taskDir, taskSlug } from '../src/report/paths.js';
+import { RESULT_ROOT, casesFile, reportDir, runStamp, taskDir, taskSlug, toPosix } from '../src/report/paths.js';
 import { addReportSheet, listReportStamps, readTaskMeta, upsertTaskMeta } from '../src/cli/task.js';
 
 describe('taskSlug', () => {
@@ -85,5 +85,15 @@ describe('task metadata', () => {
     writeFileSync(casesFile('TIN-3'), 'ID,Title,Steps\n');
 
     expect(listReportStamps('TIN-3')).toEqual(['2026-09-01T10-00-00', '2026-09-02T10-00-00']);
+  });
+});
+
+describe('toPosix', () => {
+  it('makes a report path portable regardless of the platform that wrote it', () => {
+    // join() gives backslashes on Windows; a browser src and a sheet cell want
+    // forward slashes, and a POSIX path must survive untouched
+    expect(toPosix('screenshots\\TC-001-failed.png')).toBe('screenshots/TC-001-failed.png');
+    expect(toPosix('screenshots/TC-001-failed.png')).toBe('screenshots/TC-001-failed.png');
+    expect(toPosix('Test Result\\TIN-1\\screenshots\\a.png')).toBe('Test Result/TIN-1/screenshots/a.png');
   });
 });
